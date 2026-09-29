@@ -123,3 +123,16 @@ textarea{font-size:16px}
   .controls .btn{min-height:52px}
   .install-btn{display:inline-flex}
 }
+
+
+/* v1.1.1 – Fotoauswahl im Trainingsmodus */
+.photo-picker{display:grid;grid-template-columns:auto minmax(220px,1fr);gap:10px;align-items:center;margin:12px auto 8px;max-width:650px}
+.photo-picker label{font-size:13px;font-weight:800;color:var(--muted)}
+.photo-picker select{width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);padding:10px 12px;font:inherit;font-weight:700}
+.photo-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px auto 2px;max-width:650px}
+.photo-controls .btn{width:100%;min-height:46px}
+@media(max-width:600px){
+  .photo-picker{grid-template-columns:1fr;gap:6px}
+  .photo-controls{grid-template-columns:1fr 1fr}
+  .photo-controls #trainingRandomPhotoBtn{grid-column:1/-1;grid-row:1}
+}

@@ -31,7 +31,7 @@ Erwartet wird ungefähr:
   "openaiConfigured": true,
   "realtimeModel": "gpt-realtime-2.1",
   "evaluationModel": "gpt-5.6-terra",
-  "version": "1.0.0-render"
+  "version": "1.1.0-render"
 }
 ```
 

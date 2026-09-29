@@ -1,0 +1,43 @@
+
+> dtz-speaking-trainer@1.1.1 qa
+> node qa-test.mjs
+
+PASS | Health endpoint | 200 qa-test
+PASS | Version endpoint | qa-test
+PASS | Startseite HTML | text/html; charset=utf-8
+PASS | Fotobibliothek enthält 25 Aufgaben | 25 Aufgaben
+PASS | Foto dtz_01 · Schule | 128 KB
+PASS | Foto dtz_02 · Kindergarten | 84 KB
+PASS | Foto dtz_03 · Einkaufen | 127 KB
+PASS | Foto dtz_04 · Arztbesuch | 71 KB
+PASS | Foto dtz_05 · Apotheke | 78 KB
+PASS | Foto dtz_06 · Arbeit | 97 KB
+PASS | Foto dtz_07 · Büro | 80 KB
+PASS | Foto dtz_08 · Wohnen | 75 KB
+PASS | Foto dtz_09 · Umzug | 71 KB
+PASS | Foto dtz_10 · Bus und Bahn | 103 KB
+PASS | Foto dtz_11 · Bahnhof | 103 KB
+PASS | Foto dtz_12 · Verkehr | 94 KB
+PASS | Foto dtz_13 · Familie | 132 KB
+PASS | Foto dtz_14 · Freizeit | 109 KB
+PASS | Foto dtz_15 · Sport | 91 KB
+PASS | Foto dtz_16 · Park | 108 KB
+PASS | Foto dtz_17 · Restaurant | 94 KB
+PASS | Foto dtz_18 · Nachbarschaft | 97 KB
+PASS | Foto dtz_19 · Behörde | 75 KB
+PASS | Foto dtz_20 · Post und Paket | 86 KB
+PASS | Foto dtz_21 · Reise | 101 KB
+PASS | Foto dtz_22 · Feier | 94 KB
+PASS | Foto dtz_23 · Handwerker | 72 KB
+PASS | Foto dtz_24 · Telefon und Kommunikation | 66 KB
+PASS | Foto dtz_25 · Ausflug | 96 KB
+PASS | Manifest gültiges JSON | DTZ Sprechen
+PASS | Service Worker erreichbar | text/javascript; charset=utf-8
+PASS | Realtime ohne API-Key sauber abgelehnt | 503 erwartet
+PASS | Fehlendes Asset liefert 404 | 404 erwartet
+PASS | Security Header | ok
+PASS | Fremder Origin wird blockiert | 403 erwartet
+PASS | Render Blueprint vorhanden | ok
+PASS | Keine echte .env im Paket | ok
+
+Alle 37 QA-Tests bestanden.

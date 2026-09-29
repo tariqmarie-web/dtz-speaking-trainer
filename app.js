@@ -191,6 +191,33 @@ async function validatePhotos(){
 function currentTrainingPhoto(){ return photoTasks[state.trainingPhotoIndex % photoTasks.length]; }
 function currentExamPhoto(){ return photoTasks[state.examPhotoIndex % photoTasks.length]; }
 
+function populatePhotoSelect(){
+  const select=$('#trainingPhotoSelect');
+  if(!select) return;
+  select.innerHTML=photoTasks.map((photo,index)=>`<option value="${index}">${String(index+1).padStart(2,'0')} · ${escapeHtml(photo.topic)}</option>`).join('');
+  select.value=String(state.trainingPhotoIndex);
+}
+
+async function changeTrainingPhoto(index,{restartLive=true}={}){
+  const total=photoTasks.length;
+  if(!total) return;
+  state.trainingPhotoIndex=((Number(index)%total)+total)%total;
+  const photo=currentTrainingPhoto();
+  trainingPrompts.image=photo.prompt;
+  renderTrainingPhoto();
+  const select=$('#trainingPhotoSelect');
+  if(select) select.value=String(state.trainingPhotoIndex);
+  $('#trainingTranscript').value='';
+  $('#trainingTranscript').dataset.committed='';
+  $('#trainingFeedback').classList.add('hidden');
+  $('#trainingStatusText').textContent=`Foto ${state.trainingPhotoIndex+1} von ${total} · ${photo.topic}`;
+  if(restartLive && state.realtimeConnected && state.liveMode==='training'){
+    await realtime.disconnect();
+    try{ await startRealtime('training'); }
+    catch(e){ $('#trainingStatusText').textContent=`Live-KI nicht verfügbar: ${friendlyLiveError(e)}`; }
+  }
+}
+
 function renderTrainingPhoto(){
   const show = state.trainingTopic === 'image';
   const wrap = $('#trainingImageTask');
@@ -203,6 +230,8 @@ function renderTrainingPhoto(){
   $('#trainingPrompt').textContent=photo.prompt;
   const caption=$('#trainingPhotoCaption');
   if(caption) caption.textContent=`Thema: ${photo.topic} · Foto ${state.trainingPhotoIndex+1} von ${photoTasks.length}`;
+  const select=$('#trainingPhotoSelect');
+  if(select && select.options.length===photoTasks.length) select.value=String(state.trainingPhotoIndex);
 }
 
 function renderExamPhoto(){
@@ -391,17 +420,15 @@ $$('#trainingTopics .chip').forEach(ch=>ch.addEventListener('click',async()=>{
   }
 }));
 $('#trainingListenBtn').addEventListener('click',()=>speak($('#trainingPrompt').textContent));
-$('#trainingNextPhotoBtn')?.addEventListener('click',async()=>{
-  state.trainingPhotoIndex=(state.trainingPhotoIndex+1)%photoTasks.length;
-  const photo=currentTrainingPhoto();
-  trainingPrompts.image=photo.prompt;
-  renderTrainingPhoto();
-  $('#trainingTranscript').value='';$('#trainingTranscript').dataset.committed='';$('#trainingFeedback').classList.add('hidden');
-  if(state.realtimeConnected && state.liveMode==='training'){
-    await realtime.disconnect();
-    try{ await startRealtime('training'); }catch(e){ $('#trainingStatusText').textContent=`Live-KI nicht verfügbar: ${friendlyLiveError(e)}`; }
-  }
+$('#trainingPrevPhotoBtn')?.addEventListener('click',()=>changeTrainingPhoto(state.trainingPhotoIndex-1));
+$('#trainingNextPhotoBtn')?.addEventListener('click',()=>changeTrainingPhoto(state.trainingPhotoIndex+1));
+$('#trainingRandomPhotoBtn')?.addEventListener('click',()=>{
+  if(photoTasks.length<2) return;
+  let next=state.trainingPhotoIndex;
+  while(next===state.trainingPhotoIndex) next=Math.floor(Math.random()*photoTasks.length);
+  changeTrainingPhoto(next);
 });
+$('#trainingPhotoSelect')?.addEventListener('change',e=>changeTrainingPhoto(Number(e.target.value)));
 $('#trainingResetBtn').addEventListener('click',()=>{$('#trainingTranscript').value='';$('#trainingTranscript').dataset.committed='';$('#trainingFeedback').classList.add('hidden');$('#trainingStatusText').textContent='Mikrofon bereit';});
 $('#trainingLiveBtn').addEventListener('click',async()=>{
   if(state.realtimeConnected){ await realtime.disconnect();state.liveMode=null;return; }
@@ -634,6 +661,7 @@ async function initializeApp(){
   renderProgress();
   installImageGuards();
   await loadPhotoLibrary();
+  populatePhotoSelect();
   renderTrainingPhoto();
   await validatePhotos();
   warmupBackend();

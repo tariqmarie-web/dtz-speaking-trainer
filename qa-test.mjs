@@ -37,14 +37,24 @@ await check('Startseite HTML',async()=>{
   if(!t.includes('DTZ Speaking Trainer')) throw new Error('Titel fehlt');
   if(!t.includes('trainingTaskPhoto')) throw new Error('Foto-Element im Training fehlt');
   if(!t.includes('examTaskPhoto')) throw new Error('Foto-Element in Prüfung fehlt');
+  if(!t.includes('trainingPhotoSelect')||!t.includes('trainingPrevPhotoBtn')||!t.includes('trainingRandomPhotoBtn')||!t.includes('trainingNextPhotoBtn')) throw new Error('Foto-Auswahlsteuerung fehlt');
   return r.headers.get('content-type');
 });
-for(const f of ['school_family.jpg','supermarket_family.jpg','family_home.jpg']){
-  await check(`Foto ${f}`,async()=>{
-    const r=await fetch(`${base}/assets/${f}`);const b=new Uint8Array(await r.arrayBuffer());
+await check('Fotobibliothek enthält 25 Aufgaben',async()=>{
+  const r=await fetch(`${base}/data/photoTasks.json`);const j=await r.json();
+  if(!r.ok||!Array.isArray(j)) throw new Error(`HTTP ${r.status}`);
+  if(j.length!==25) throw new Error(`Erwartet 25, gefunden ${j.length}`);
+  const ids=new Set(j.map(x=>x.id)); if(ids.size!==25) throw new Error('Doppelte IDs');
+  if(j.some(x=>!x.src||!x.topic||!x.prompt||!x.followUp)) throw new Error('Pflichtfelder fehlen');
+  return '25 Aufgaben';
+});
+const photoManifest=JSON.parse(await fs.readFile(path.join(__dirname,'data','photoTasks.json'),'utf8'));
+for(const photo of photoManifest){
+  await check(`Foto ${photo.id} · ${photo.topic}`,async()=>{
+    const r=await fetch(`${base}/${photo.src}`);const b=new Uint8Array(await r.arrayBuffer());
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     if(!(r.headers.get('content-type')||'').startsWith('image/jpeg')) throw new Error(`MIME ${r.headers.get('content-type')}`);
-    if(b.length<10000) throw new Error(`Datei zu klein ${b.length}`);
+    if(b.length<30000) throw new Error(`Datei zu klein ${b.length}`);
     if(!(b[0]===0xff&&b[1]===0xd8)) throw new Error('JPEG-Magic fehlt');
     return `${Math.round(b.length/1024)} KB`;
   });
@@ -56,7 +66,7 @@ await check('Manifest gültiges JSON',async()=>{
 });
 await check('Service Worker erreichbar',async()=>{
   const r=await fetch(`${base}/sw.js`);const t=await r.text();
-  if(!t.includes('dtz-speaking-v1.0.0')) throw new Error('Cache-Version falsch');
+  if(!t.includes('dtz-speaking-v1.1.1')) throw new Error('Cache-Version falsch');
   return r.headers.get('content-type');
 });
 await check('Realtime ohne API-Key sauber abgelehnt',async()=>{

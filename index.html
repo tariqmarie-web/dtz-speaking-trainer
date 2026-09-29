@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon-192.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=1.1.0" />
+  <link rel="stylesheet" href="styles.css?v=1.1.1" />
 </head>
 <body>
   <div class="app-shell">
@@ -107,7 +107,15 @@
             <figure id="trainingImageTask" class="photo-task hidden" aria-label="Bildaufgabe für das Sprechtraining">
               <img id="trainingTaskPhoto" src="assets/photos/dtz_01_schule.jpg" alt="DTZ-Übungsfoto zum Thema Schule" loading="eager" />
               <figcaption id="trainingPhotoCaption">Thema: Schule · Foto 1 von 25</figcaption>
-              <button class="btn ghost photo-next" id="trainingNextPhotoBtn" type="button">Anderes Foto</button>
+              <div class="photo-picker" aria-label="Foto auswählen">
+                <label for="trainingPhotoSelect">Prüfungsthema</label>
+                <select id="trainingPhotoSelect" aria-label="Prüfungsthema auswählen"></select>
+              </div>
+              <div class="photo-controls" aria-label="Foto wechseln">
+                <button class="btn ghost" id="trainingPrevPhotoBtn" type="button">← Zurück</button>
+                <button class="btn ghost" id="trainingRandomPhotoBtn" type="button">🎲 Zufällig</button>
+                <button class="btn ghost" id="trainingNextPhotoBtn" type="button">Weiter →</button>
+              </div>
             </figure>
             <div class="conversation-stage training-stage">
               <div class="partner-avatar">KI</div>
@@ -231,11 +239,11 @@
       </section>
     </main>
   </div>
-  <script src="realtime.js?v=1.1.0"></script>
-  <script src="app.js?v=1.1.0"></script>
+  <script src="realtime.js?v=1.1.1"></script>
+  <script src="app.js?v=1.1.1"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/sw.js?v=1.1.0').then(r=>r.update()).catch(()=>{});
+      navigator.serviceWorker.register('/sw.js?v=1.1.1').then(r=>r.update()).catch(()=>{});
     }
     let deferredInstallPrompt;
     window.addEventListener('beforeinstallprompt', e => {
