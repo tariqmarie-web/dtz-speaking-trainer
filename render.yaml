@@ -10,7 +10,7 @@ services:
       - key: NODE_VERSION
         value: 22.16.0
       - key: APP_VERSION
-        value: 1.0.0-render
+        value: 1.1.0-render
       - key: OPENAI_REALTIME_MODEL
         value: gpt-realtime-2.1
       - key: OPENAI_EVALUATION_MODEL

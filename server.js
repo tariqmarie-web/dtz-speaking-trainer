@@ -24,7 +24,7 @@ try {
   }
 } catch {}
 
-const APP_VERSION = process.env.APP_VERSION || '1.0.0-render';
+const APP_VERSION = process.env.APP_VERSION || '1.1.0-render';
 const port = Number(process.env.PORT || 10000);
 const host = process.env.HOST || '0.0.0.0';
 const rawApiKey = (process.env.OPENAI_API_KEY || "").trim();

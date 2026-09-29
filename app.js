@@ -32,29 +32,40 @@ if (!localStorage.getItem('dtzUserId')) {
   localStorage.setItem('dtzUserId', (crypto.randomUUID?.() || `u-${Date.now()}-${Math.random()}`).toString());
 }
 
-const photoTasks = [
+let photoTasks = [
   {
+    id:'fallback_01',
     src:'assets/school_family.jpg',
     alt:'Eine erwachsene Person und ein Schulkind vor einer Grundschule',
     topic:'Schule und Familie',
+    level:'A2-B1',
     expected:'Eine erwachsene Bezugsperson steht mit einem Schulkind vor einer Grundschule; im Hintergrund gehen weitere Kinder in das Gebäude.',
-    prompt:'Beschreibe bitte das Foto so genau wie möglich. Was siehst du? Was passiert gerade? Erzähle danach, ob du eine ähnliche Situation aus deinem Alltag kennst.'
-  },
-  {
-    src:'assets/supermarket_family.jpg',
-    alt:'Eine erwachsene Person und ein Kind beim Einkaufen im Supermarkt',
-    topic:'Einkaufen',
-    expected:'Eine erwachsene Person und ein Kind stehen mit einem Einkaufswagen in der Obst- und Gemüseabteilung eines Supermarkts.',
-    prompt:'Beschreibe bitte das Foto. Wo sind die Personen? Was machen sie? Erzähle danach von deinen eigenen Erfahrungen beim Einkaufen.'
-  },
-  {
-    src:'assets/family_home.jpg',
-    alt:'Eine Familie sitzt gemeinsam zu Hause',
-    topic:'Familie zu Hause',
-    expected:'Eine Familie mit zwei Erwachsenen und zwei Kindern sitzt gemeinsam in einem Wohnraum und spricht miteinander.',
-    prompt:'Beschreibe bitte das Foto. Wer ist zu sehen und was könnte gerade passieren? Erzähle anschließend etwas über Familienzeit in deinem Alltag.'
+    prompt:'Beschreibe bitte das Foto so genau wie möglich. Was siehst du? Was passiert gerade? Erzähle danach, ob du eine ähnliche Situation aus deinem Alltag kennst.',
+    followUp:'Erzähle von deinen Erfahrungen mit Schule oder dem Schulweg.',
+    active:true
   }
 ];
+
+async function loadPhotoLibrary(){
+  try{
+    const r = await fetch('/data/photoTasks.json', { cache:'no-store' });
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if(!Array.isArray(data) || data.length < 25) throw new Error(`Fotobibliothek unvollständig: ${Array.isArray(data)?data.length:0}`);
+    const valid = data.filter(x=>x && x.active!==false && x.src && x.topic && x.prompt);
+    if(valid.length < 25) throw new Error(`Nur ${valid.length} aktive Fotos gefunden`);
+    photoTasks = valid;
+    state.trainingPhotoIndex = Math.min(state.trainingPhotoIndex, photoTasks.length-1);
+    state.examPhotoIndex = Math.min(state.examPhotoIndex, photoTasks.length-1);
+    trainingPrompts.image = photoTasks[0].prompt;
+    $('#globalStatus').textContent = `25 Fotos geladen`;
+    return true;
+  }catch(error){
+    console.error('Fotobibliothek konnte nicht geladen werden:', error);
+    $('#globalStatus').textContent = 'Fotobibliothek: Fallback aktiv';
+    return false;
+  }
+}
 
 const trainingPrompts = {
   intro: 'Erzähl mir bitte kurz etwas über dich: Woher kommst du, was machst du und was machst du gern in deiner Freizeit?',
@@ -190,6 +201,8 @@ function renderTrainingPhoto(){
   $('#trainingTaskPhoto').src=photo.src;
   $('#trainingTaskPhoto').alt=photo.alt;
   $('#trainingPrompt').textContent=photo.prompt;
+  const caption=$('#trainingPhotoCaption');
+  if(caption) caption.textContent=`Thema: ${photo.topic} · Foto ${state.trainingPhotoIndex+1} von ${photoTasks.length}`;
 }
 
 function renderExamPhoto(){
@@ -202,7 +215,7 @@ function renderExamPhoto(){
   const photo=currentExamPhoto();
   $('#examTaskPhoto').src=photo.src;
   $('#examTaskPhoto').alt=photo.alt;
-  $('#examPhotoCaption').textContent='Beschreiben Sie das Foto so, wie Sie es in einer Prüfung tun würden.';
+  $('#examPhotoCaption').textContent=`Thema: ${photo.topic} · Beschreiben Sie das Foto so, wie Sie es in einer Prüfung tun würden.`;
 }
 
 function installImageGuards(){
@@ -338,7 +351,7 @@ function examSessionInstructions(part){
     '1A':'Lass den Kandidaten sich selbstständig vorstellen. Unterbrich nicht mit einer Stichpunktliste.',
     '1B':'Stelle eine natürliche Nachfrage, die sich direkt auf die vorherige Vorstellung bezieht.',
     '2A':`Lass den Kandidaten das angezeigte Foto beschreiben. Die interne Bildreferenz lautet: ${photo.expected} Korrigiere die Beschreibung während der Prüfung nicht und verrate keine Bilddetails, bevor der Kandidat sie selbst erwähnt. Frage nur knapp nach, wenn er sehr früh endet.`,
-    '2B':`Frage nach einer persönlichen Erfahrung passend zum zuvor gezeigten Foto. Interne Bildreferenz: ${photo.expected}`,
+    '2B':`Frage nach einer persönlichen Erfahrung passend zum zuvor gezeigten Foto. Nutze diese thematische Nachfrage: ${photo.followUp || 'Erzähle von einer ähnlichen Erfahrung.'} Interne Bildreferenz: ${photo.expected}`,
     '3':'Sei zweiter Teilnehmer beim gemeinsamen Planen. Stimme nicht allem zu. Bringe einen realistischen Einwand oder Gegenvorschlag ein und reagiere auf den Kandidaten.'
   };
   return `Du bist ein KI-Prüfungspartner für eine DTZ-Sprechsimulation. Aktueller Prüfungsteil: ${part.id}. ${rules[part.id]} Sprich klares natürliches Deutsch. Keine Korrektur, keine Übersetzung, keine Musterantwort, keine Punkte oder Niveauhinweise. Reagiere auf den konkreten Inhalt. Bleibe ausschließlich in Teil ${part.id}, bis die Anwendung umschaltet.`;
@@ -349,7 +362,7 @@ async function startRealtime(mode){
   await ensureBackendReady();
   if(!state.openaiConfigured) throw new Error('OPENAI_API_KEY fehlt auf dem Server.');
   const examScenario = ['2A','2B'].includes(currentPart()?.id)
-    ? `${currentPart().prompt} Interne Bildreferenz: ${currentExamPhoto().expected}`
+    ? `${currentPart().id==='2B' ? (currentExamPhoto().followUp || currentPart().prompt) : currentPart().prompt} Interne Bildreferenz: ${currentExamPhoto().expected}`
     : currentPart()?.prompt;
   const trainingScenario = state.trainingTopic==='image'
     ? `${currentTrainingPhoto().prompt} Interne Bildreferenz: ${currentTrainingPhoto().expected}`
@@ -448,7 +461,8 @@ async function beginExam(){
 
 function loadExamPart(){
   const part=currentPart();
-  $('#examPartTitle').textContent=part.title;$('#examPrompt').textContent=part.prompt;$('#examTranscript').value='';$('#examTranscript').dataset.committed='';
+  const displayedPrompt = part.id==='2B' ? (currentExamPhoto().followUp || part.prompt) : part.prompt;
+  $('#examPartTitle').textContent=part.title;$('#examPrompt').textContent=displayedPrompt;$('#examTranscript').value='';$('#examTranscript').dataset.committed='';
   renderExamPhoto();
   $('#examProgressBar').style.width=`${(state.examIndex/examParts.length)*100}%`;
   $('#examNextBtn').textContent=state.examIndex===examParts.length-1?'Prüfung beenden':'Nächster Teil';
@@ -463,7 +477,7 @@ async function nextExamPart(){
   if(state.realtimeConnected){
     realtime.cancelResponse();
     realtime.updateInstructions(examSessionInstructions(currentPart()));
-    realtime.startPrompt(`Wechsle jetzt ausschließlich zu Prüfungsteil ${currentPart().id}. Stelle die passende Aufgabe natürlich: ${currentPart().prompt}. Berücksichtige den bisherigen Gesprächskontext, wenn der Teil darauf aufbaut.`);
+    realtime.startPrompt(`Wechsle jetzt ausschließlich zu Prüfungsteil ${currentPart().id}. Stelle die passende Aufgabe natürlich: ${$('#examPrompt').textContent}. Berücksichtige den bisherigen Gesprächskontext, wenn der Teil darauf aufbaut.`);
   } else speak($('#examPrompt').textContent,0.92);
 }
 
@@ -615,8 +629,14 @@ function renderProgress(){
 }
 
 window.addEventListener('beforeunload',()=>{ if(realtime) realtime.disconnect(); });
-renderProgress();
-installImageGuards();
-renderTrainingPhoto();
-validatePhotos();
-warmupBackend();
+
+async function initializeApp(){
+  renderProgress();
+  installImageGuards();
+  await loadPhotoLibrary();
+  renderTrainingPhoto();
+  await validatePhotos();
+  warmupBackend();
+}
+
+initializeApp();

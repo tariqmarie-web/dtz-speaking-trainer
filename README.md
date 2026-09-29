@@ -1,4 +1,10 @@
-# DTZ Speaking Trainer – Render Cloud Edition 1.0
+# DTZ Speaking Trainer – Render Edition v1.1.0
+
+## Neu in v1.1.0: 25 Bildaufgaben
+
+Die App enthält jetzt **25 lokale Übungsfotos zu unterschiedlichen DTZ-nahen Alltagsthemen**. Die Bildbibliothek wird automatisch aus `data/photoTasks.json` geladen. Für **Teil 2A** wird ein Foto zufällig gewählt; **Teil 2B** verwendet dasselbe Foto und eine thematisch passende Nachfrage. Im Trainingsmodus wechselt **„Anderes Foto“** durch alle 25 Themen.
+
+Die Bilder sind **KI-generierte, fiktive Übungsbilder** und keine offiziellen telc-/BAMF-Prüfungsbilder.
 
 Browserbasierter DTZ-Sprechtrainer für PC, Android-Handy und Android-Tablet.
 

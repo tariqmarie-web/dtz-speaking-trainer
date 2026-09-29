@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon-192.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=1.0.0" />
+  <link rel="stylesheet" href="styles.css?v=1.1.0" />
 </head>
 <body>
   <div class="app-shell">
@@ -105,8 +105,8 @@
               <button class="chip" data-topic="fluency">Flüssigkeit</button>
             </div>
             <figure id="trainingImageTask" class="photo-task hidden" aria-label="Bildaufgabe für das Sprechtraining">
-              <img id="trainingTaskPhoto" src="assets/school_family.jpg" alt="Eine erwachsene Person und ein Schulkind vor einer Grundschule" loading="eager" />
-              <figcaption>Beschreibe das Foto frei. Es gibt nicht nur eine richtige Antwort.</figcaption>
+              <img id="trainingTaskPhoto" src="assets/photos/dtz_01_schule.jpg" alt="DTZ-Übungsfoto zum Thema Schule" loading="eager" />
+              <figcaption id="trainingPhotoCaption">Thema: Schule · Foto 1 von 25</figcaption>
               <button class="btn ghost photo-next" id="trainingNextPhotoBtn" type="button">Anderes Foto</button>
             </figure>
             <div class="conversation-stage training-stage">
@@ -168,7 +168,7 @@
           </div>
           <div class="progress-track"><div id="examProgressBar"></div></div>
           <figure id="imageTask" class="photo-task hidden" aria-label="Bildaufgabe">
-            <img id="examTaskPhoto" src="assets/school_family.jpg" alt="Eine erwachsene Person und ein Schulkind vor einer Grundschule" loading="eager" />
+            <img id="examTaskPhoto" src="assets/photos/dtz_01_schule.jpg" alt="DTZ-Übungsfoto zum Thema Schule" loading="eager" />
             <figcaption id="examPhotoCaption">Sehen Sie sich das Foto genau an und beschreiben Sie die Situation.</figcaption>
           </figure>
           <div class="conversation-stage exam-stage">
@@ -231,11 +231,11 @@
       </section>
     </main>
   </div>
-  <script src="realtime.js?v=1.0.0"></script>
-  <script src="app.js?v=1.0.0"></script>
+  <script src="realtime.js?v=1.1.0"></script>
+  <script src="app.js?v=1.1.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/sw.js?v=1.0.0').then(r=>r.update()).catch(()=>{});
+      navigator.serviceWorker.register('/sw.js?v=1.1.0').then(r=>r.update()).catch(()=>{});
     }
     let deferredInstallPrompt;
     window.addEventListener('beforeinstallprompt', e => {

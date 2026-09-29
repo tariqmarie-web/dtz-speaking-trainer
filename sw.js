@@ -1,8 +1,39 @@
-const CACHE='dtz-speaking-v1.0.0';
+const CACHE='dtz-speaking-v1.1.0';
 const STATIC=[
-  '/', '/index.html', '/styles.css?v=1.0.0', '/app.js?v=1.0.0', '/realtime.js?v=1.0.0', '/manifest.webmanifest',
-  '/assets/icon-192.png','/assets/icon-512.png',
-  '/assets/school_family.jpg','/assets/supermarket_family.jpg','/assets/family_home.jpg'
+  '/',
+  '/index.html',
+  '/styles.css?v=1.1.0',
+  '/app.js?v=1.1.0',
+  '/realtime.js?v=1.1.0',
+  '/manifest.webmanifest',
+  '/data/photoTasks.json',
+  '/assets/icon-192.png',
+  '/assets/icon-512.png',
+  '/assets/photos/dtz_01_schule.jpg',
+  '/assets/photos/dtz_02_kindergarten.jpg',
+  '/assets/photos/dtz_03_einkaufen.jpg',
+  '/assets/photos/dtz_04_arzt.jpg',
+  '/assets/photos/dtz_05_apotheke.jpg',
+  '/assets/photos/dtz_06_arbeit.jpg',
+  '/assets/photos/dtz_07_buero.jpg',
+  '/assets/photos/dtz_08_wohnen.jpg',
+  '/assets/photos/dtz_09_umzug.jpg',
+  '/assets/photos/dtz_10_bus_bahn.jpg',
+  '/assets/photos/dtz_11_bahnhof.jpg',
+  '/assets/photos/dtz_12_verkehr.jpg',
+  '/assets/photos/dtz_13_familie.jpg',
+  '/assets/photos/dtz_14_freizeit.jpg',
+  '/assets/photos/dtz_15_sport.jpg',
+  '/assets/photos/dtz_16_park.jpg',
+  '/assets/photos/dtz_17_restaurant.jpg',
+  '/assets/photos/dtz_18_nachbarschaft.jpg',
+  '/assets/photos/dtz_19_behoerde.jpg',
+  '/assets/photos/dtz_20_post_paket.jpg',
+  '/assets/photos/dtz_21_reise.jpg',
+  '/assets/photos/dtz_22_feier.jpg',
+  '/assets/photos/dtz_23_handwerker.jpg',
+  '/assets/photos/dtz_24_telefon.jpg',
+  '/assets/photos/dtz_25_ausflug.jpg'
 ];
 
 self.addEventListener('install', event => {
