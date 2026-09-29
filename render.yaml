@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: dtz-speaking-trainer
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: APP_VERSION
+        value: 1.0.0-render
+      - key: OPENAI_REALTIME_MODEL
+        value: gpt-realtime-2.1
+      - key: OPENAI_EVALUATION_MODEL
+        value: gpt-5.6-terra
+      - key: OPENAI_TRANSCRIPTION_MODEL
+        value: gpt-4o-transcribe
+      - key: OPENAI_VOICE
+        value: marin
+      - key: OPENAI_API_KEY
+        sync: false

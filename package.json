@@ -1,0 +1,14 @@
+{
+  "name": "dtz-speaking-trainer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "qa": "node qa-test.mjs"
+  }
+}

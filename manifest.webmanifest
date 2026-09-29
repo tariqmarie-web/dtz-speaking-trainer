@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "DTZ Speaking Trainer & Examiner",
+  "short_name": "DTZ Sprechen",
+  "description": "KI-gestütztes Sprechtraining und DTZ-orientierte Prüfungssimulation A2–B1",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#3157d5",
+  "orientation": "any",
+  "icons": [
+    {"src":"/assets/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"/assets/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

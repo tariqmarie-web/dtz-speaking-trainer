@@ -1,0 +1,24 @@
+# Render Deployment Checkliste
+
+- [ ] GitHub-Repository erstellt
+- [ ] Ordnerinhalt hochgeladen
+- [ ] `.env` NICHT hochgeladen
+- [ ] Render → New → Blueprint
+- [ ] Repository verbunden
+- [ ] `OPENAI_API_KEY` in Render als Secret eingetragen
+- [ ] Deploy erfolgreich
+- [ ] `/api/health` zeigt `ok: true`
+- [ ] `/api/health` zeigt `openaiConfigured: true`
+- [ ] Hauptseite lädt
+- [ ] `Bild beschreiben` zeigt echtes Foto
+- [ ] Mikrofon auf PC erlaubt
+- [ ] Live-KI auf PC gestartet
+- [ ] Live-KI auf Android-Handy gestartet
+- [ ] Live-KI auf Android-Tablet gestartet
+- [ ] KI unterbricht Denkpausen nicht zu früh
+- [ ] Teil 2A zeigt Foto
+- [ ] Teil 2B behält dasselbe Foto
+- [ ] Teil 3 reagiert dynamisch auf Vorschläge
+- [ ] Prüfung zeigt währenddessen keine Bewertung
+- [ ] Ergebnis wird erst nach Abschluss angezeigt
+- [ ] PWA/Startbildschirm auf Android installiert

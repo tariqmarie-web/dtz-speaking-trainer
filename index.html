@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#3157d5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>DTZ Speaking Trainer & Examiner</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="styles.css?v=1.0.0" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">DTZ</div>
+        <div>
+          <strong>Speaking Trainer</strong>
+          <span>A2 → B1</span>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-item active" data-view="home">Heute üben</button>
+        <button class="nav-item" data-view="training">Sprechen üben</button>
+        <button class="nav-item" data-view="exam">Prüfung simulieren</button>
+        <button class="nav-item" data-view="progress">Fortschritt</button>
+      </nav>
+      <div class="sidebar-note">
+        <strong>KI-gestützte Simulation</strong>
+        <span>Kein offizielles DTZ-Prüfungsergebnis.</span>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">DTZ Sprechen</p>
+          <h1 id="pageTitle">Heute üben</h1>
+        </div>
+        <div class="top-status-group"><button class="status-pill install-btn hidden" id="installAppBtn" type="button">App installieren</button><div class="status-pill" id="aiStatus">Live-KI: prüfe …</div><div class="status-pill" id="globalStatus">Server wird geprüft …</div></div>
+      </header>
+
+      <section class="view active" id="view-home">
+        <div class="hero card">
+          <div>
+            <span class="badge">Tagesziel · 35 Minuten</span>
+            <h2>Heute: flüssiger reagieren & gemeinsam planen</h2>
+            <p>Dein aktueller Schwerpunkt ist <strong>Interaktion</strong>. Starte mit einem kurzen Warm-up und gehe danach in ein natürliches Planungsgespräch.</p>
+            <div class="hero-actions">
+              <button class="btn primary" id="startTodayBtn">Training starten</button>
+              <button class="btn ghost" data-jump="exam">Prüfung simulieren</button>
+            </div>
+          </div>
+          <div class="score-ring" aria-label="Aktueller Fortschritt 68 Prozent">
+            <div><strong id="homeScore">68</strong><span>/100</span></div>
+            <small>letzte Simulation</small>
+          </div>
+        </div>
+
+        <div class="grid-4 metrics">
+          <article class="card metric"><span>Aufgabenbewältigung</span><strong>36/50</strong><small>B1-nah</small></article>
+          <article class="card metric"><span>Aussprache</span><strong>8/10</strong><small>stabil</small></article>
+          <article class="card metric"><span>Flüssigkeit</span><strong>6/10</strong><small>Trainingsfokus</small></article>
+          <article class="card metric"><span>Wortschatz</span><strong>12/15</strong><small>gut</small></article>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <div class="card-head"><div><span class="eyebrow">Plan</span><h3>Heutige Einheit</h3></div><span>35 Min.</span></div>
+            <div class="timeline">
+              <div><b>5 Min.</b><span>Warm-up: Sich vorstellen</span></div>
+              <div><b>10 Min.</b><span>Schwachstelle: längere Antworten</span></div>
+              <div><b>10 Min.</b><span>Teil 3: gemeinsam planen</span></div>
+              <div><b>10 Min.</b><span>Feedback + Wiederholen</span></div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-head"><div><span class="eyebrow">Hinweis</span><h3>Was heute zählt</h3></div></div>
+            <ul class="clean-list">
+              <li>Antworten nicht nur mit „ja/nein“.</li>
+              <li>Mindestens einen eigenen Vorschlag machen.</li>
+              <li>Einen Gegenvorschlag höflich begründen.</li>
+              <li>Bei Bedarf nachfragen statt das Gespräch abzubrechen.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="view-training">
+        <div class="section-grid">
+          <article class="card session-card">
+            <div class="card-head">
+              <div><span class="eyebrow">Trainingsmodus</span><h3>Natürliches Gespräch</h3></div>
+              <span class="badge soft">Coaching erlaubt</span>
+            </div>
+            <p>Wähle ein Ziel. Der KI-Trainer reagiert auf deine Antwort und gibt danach direktes Feedback.</p>
+            <div class="chips" id="trainingTopics">
+              <button class="chip active" data-topic="intro">Sich vorstellen</button>
+              <button class="chip" data-topic="image">Bild beschreiben</button>
+              <button class="chip" data-topic="plan">Gemeinsam planen</button>
+              <button class="chip" data-topic="fluency">Flüssigkeit</button>
+            </div>
+            <figure id="trainingImageTask" class="photo-task hidden" aria-label="Bildaufgabe für das Sprechtraining">
+              <img id="trainingTaskPhoto" src="assets/school_family.jpg" alt="Eine erwachsene Person und ein Schulkind vor einer Grundschule" loading="eager" />
+              <figcaption>Beschreibe das Foto frei. Es gibt nicht nur eine richtige Antwort.</figcaption>
+              <button class="btn ghost photo-next" id="trainingNextPhotoBtn" type="button">Anderes Foto</button>
+            </figure>
+            <div class="conversation-stage training-stage">
+              <div class="partner-avatar">KI</div>
+              <div class="speech-card">
+                <small>KI-Trainer</small>
+                <p id="trainingPrompt">Erzähl mir bitte kurz etwas über dich: Woher kommst du, was machst du und was machst du gern in deiner Freizeit?</p>
+              </div>
+            </div>
+            <div class="live-status">
+              <span class="dot" id="trainingDot"></span>
+              <span id="trainingStatusText">Mikrofon bereit</span>
+            </div>
+            <div class="controls">
+              <button class="btn primary" id="trainingLiveBtn">⚡ Live-KI starten</button>
+              <button class="btn mic" id="trainingMicBtn">🎙 Aufnahme-Fallback</button>
+              <button class="btn ghost" id="trainingListenBtn">🔊 Frage anhören</button>
+              <button class="btn ghost" id="trainingResetBtn">Neu starten</button>
+            </div>
+            <div class="transcript-panel">
+              <label>Deine Antwort</label>
+              <textarea id="trainingTranscript" placeholder="Deine erkannte Antwort erscheint hier …"></textarea>
+            </div>
+            <div id="trainingFeedback" class="feedback hidden"></div>
+          </article>
+
+          <aside class="card coach-card">
+            <span class="eyebrow">Coach</span>
+            <h3>Trainingsziel</h3>
+            <div class="skill-row"><span>Flüssigkeit</span><b>Priorität hoch</b></div>
+            <div class="skill-row"><span>Interaktion</span><b>Priorität hoch</b></div>
+            <div class="skill-row"><span>Grammatik</span><b>mittel</b></div>
+            <hr />
+            <p class="muted">Im Training darf die KI korrigieren, bessere Formulierungen zeigen und dich denselben Satz noch einmal sprechen lassen.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" id="view-exam">
+        <div class="card exam-intro" id="examIntro">
+          <span class="badge danger">Prüfungsmodus</span>
+          <h2>DTZ-Sprechprüfung simulieren</h2>
+          <p>Die Simulation bildet Teil 1A, 1B, 2A, 2B und Teil 3 ab. Während der Prüfung gibt es keine Korrekturen, keine Punkte und keine Hilfestellungen.</p>
+          <p class="device-note">Optimiert für PC, Android-Smartphone und Tablet. Auf Mobilgeräten bitte Hoch- oder Querformat nach Wunsch verwenden.</p>
+          <div class="precheck-grid">
+            <div><span>🎙</span><b>Mikrofon</b><small id="micCheck">noch nicht geprüft</small></div>
+            <div><span>🔊</span><b>Lautsprecher</b><small>bereit</small></div>
+            <div><span>🌐</span><b>Verbindung</b><small id="networkCheck">wird geprüft</small></div>
+            <div><span>🤖</span><b>Live-KI</b><small id="aiCheck">wird geprüft</small></div>
+          </div>
+          <div class="notice">Diese App ist ein funktionsfähiger MVP. Die lokale Demo bewertet heuristisch; für produktive Nutzung muss die Realtime-KI und die fachlich validierte Bewertungs-Engine serverseitig angebunden werden.</div>
+          <button class="btn primary large" id="beginExamBtn">Simulation starten</button>
+        </div>
+
+        <div class="card exam-room hidden" id="examRoom">
+          <div class="exam-topline">
+            <div><span class="eyebrow">Prüfung läuft</span><h3 id="examPartTitle">Teil 1A · Über sich sprechen</h3></div>
+            <div class="timer" id="examTimer">16:00</div>
+          </div>
+          <div class="progress-track"><div id="examProgressBar"></div></div>
+          <figure id="imageTask" class="photo-task hidden" aria-label="Bildaufgabe">
+            <img id="examTaskPhoto" src="assets/school_family.jpg" alt="Eine erwachsene Person und ein Schulkind vor einer Grundschule" loading="eager" />
+            <figcaption id="examPhotoCaption">Sehen Sie sich das Foto genau an und beschreiben Sie die Situation.</figcaption>
+          </figure>
+          <div class="conversation-stage exam-stage">
+            <div class="partner-avatar danger">KI</div>
+            <div class="speech-card">
+              <small>KI-Prüfungspartner</small>
+              <p id="examPrompt">Bitte stellen Sie sich kurz vor.</p>
+            </div>
+          </div>
+          <div class="live-status"><span class="dot" id="examDot"></span><span id="examStatusText">Bereit</span></div>
+          <div class="controls">
+            <button class="btn mic" id="examMicBtn">🎙 Antworten</button>
+            <button class="btn ghost" id="examListenBtn">🔊 Frage anhören</button>
+            <button class="btn ghost" id="examNextBtn">Nächster Teil</button>
+          </div>
+          <div class="transcript-panel exam-transcript">
+            <label>Antwort wird gespeichert (im echten Prüfungsmodus normalerweise nicht angezeigt)</label>
+            <textarea id="examTranscript" placeholder="Antwort …"></textarea>
+          </div>
+        </div>
+
+        <div class="card result-card hidden" id="examResult">
+          <div class="result-hero">
+            <div>
+              <span class="eyebrow">DTZ-Sprechsimulation</span>
+              <h2 id="resultLevel">B1-Einschätzung</h2>
+              <p id="resultBasis">KI-gestützte Simulation · kein offizielles Prüfungsergebnis</p>
+            </div>
+            <div class="big-score"><strong id="resultScore">78</strong><span>/100</span></div>
+          </div>
+          <div class="score-table" id="scoreTable"></div>
+          <div class="grid-2 result-notes">
+            <div><h3>Stärken</h3><ul id="strengthsList"></ul></div>
+            <div><h3>Nächster Fokus</h3><ul id="focusList"></ul></div>
+          </div>
+          <div class="hero-actions"><button class="btn primary" id="backToTrainingBtn">Schwächen trainieren</button><button class="btn ghost" id="repeatExamBtn">Neue Simulation</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-progress">
+        <div class="grid-3">
+          <article class="card metric big"><span>Letzte Simulation</span><strong id="progressLast">68/100</strong><small>A2 · B1-Grenze im Blick</small></article>
+          <article class="card metric big"><span>Trainingstage</span><strong id="trainingDays">9</strong><small>letzte 14 Tage</small></article>
+          <article class="card metric big"><span>Stärkster Bereich</span><strong>Wortschatz</strong><small>12/15</small></article>
+        </div>
+        <article class="card">
+          <div class="card-head"><div><span class="eyebrow">Verlauf</span><h3>Simulationen</h3></div></div>
+          <div class="chart" id="progressChart"></div>
+        </article>
+        <article class="card">
+          <div class="card-head"><div><span class="eyebrow">Lernprofil</span><h3>Aktuelle Prioritäten</h3></div></div>
+          <div class="skill-bars">
+            <div><span>Aufgabenbewältigung</span><i><b style="width:72%"></b></i><em>72%</em></div>
+            <div><span>Aussprache</span><i><b style="width:80%"></b></i><em>80%</em></div>
+            <div><span>Flüssigkeit</span><i><b style="width:60%"></b></i><em>60%</em></div>
+            <div><span>Korrektheit</span><i><b style="width:62%"></b></i><em>62%</em></div>
+            <div><span>Wortschatz</span><i><b style="width:80%"></b></i><em>80%</em></div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script src="realtime.js?v=1.0.0"></script>
+  <script src="app.js?v=1.0.0"></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      navigator.serviceWorker.register('/sw.js?v=1.0.0').then(r=>r.update()).catch(()=>{});
+    }
+    let deferredInstallPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault(); deferredInstallPrompt = e;
+      const b=document.getElementById('installAppBtn'); if(b) b.classList.remove('hidden');
+    });
+    window.addEventListener('load',()=>{
+      const b=document.getElementById('installAppBtn');
+      if(b) b.addEventListener('click', async()=>{
+        if(!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt=null; b.classList.add('hidden');
+      });
+    });
+  </script>
+</body>
+</html>
