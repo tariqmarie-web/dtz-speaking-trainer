@@ -14,7 +14,9 @@
       this.examPart = "3";
       this.trainingTopic = "plan";
       this.scenario = "";
+      this.agentRole = "trainer";
       this.connectionTimer = null;
+      this.pendingTextRequest = null;
     }
 
     emit(name, payload) {
@@ -28,6 +30,7 @@
       this.examPart = options.examPart || "3";
       this.trainingTopic = options.trainingTopic || "plan";
       this.scenario = options.scenario || "";
+      this.agentRole = options.agentRole || (this.mode === "exam" ? (this.examPart === "3" ? "partner" : "examiner") : "trainer");
       this.emit("status", "Mikrofon wird vorbereitet …");
 
       if (!window.isSecureContext && !["localhost", "127.0.0.1", "::1"].includes(location.hostname)) {
@@ -102,6 +105,7 @@
           examPart: this.examPart,
           trainingTopic: this.trainingTopic,
           scenario: this.scenario,
+          agentRole: this.agentRole,
           userId: localStorage.getItem("dtzUserId") || "anonymous"
         })
       });
@@ -191,14 +195,42 @@
           this.emit("assistantTranscript", this.assistantTranscript.trim());
           this.assistantTranscript = "";
           break;
+        case "response.output_text.delta":
+          if (this.pendingTextRequest) this.pendingTextRequest.text += event.delta || "";
+          else this.emit("assistantTextDelta", event.delta || "");
+          break;
+        case "response.output_text.done":
+          if (this.pendingTextRequest) {
+            const pending = this.pendingTextRequest;
+            this.pendingTextRequest = null;
+            clearTimeout(pending.timer);
+            pending.resolve((event.text || pending.text || "").trim());
+          } else {
+            this.emit("assistantText", (event.text || "").trim());
+          }
+          break;
         case "response.created":
           this.emit("status", "KI antwortet …");
           break;
         case "response.done":
           this.emit("responseDone", event.response);
-          if (event.response?.status === "failed") this.emit("status", "KI-Antwort fehlgeschlagen");
+          if (event.response?.status === "failed") {
+            if (this.pendingTextRequest) {
+              const pending = this.pendingTextRequest;
+              this.pendingTextRequest = null;
+              clearTimeout(pending.timer);
+              pending.reject(new Error("Verdeckte Audio-Bewertung fehlgeschlagen."));
+            }
+            this.emit("status", "KI-Antwort fehlgeschlagen");
+          }
           break;
         case "error":
+          if (this.pendingTextRequest) {
+            const pending = this.pendingTextRequest;
+            this.pendingTextRequest = null;
+            clearTimeout(pending.timer);
+            pending.reject(new Error(event.error?.message || "Realtime-Bewertung fehlgeschlagen."));
+          }
           this.emit("error", event.error || event);
           this.emit("status", "Realtime-Fehler");
           break;
@@ -216,6 +248,27 @@
       return this.send({
         type: "session.update",
         session: { type: "realtime", instructions }
+      });
+    }
+
+    requestTextAssessment(instructions, timeoutMs = 25000) {
+      if (!this.dc || this.dc.readyState !== "open") return Promise.reject(new Error("Live-KI ist nicht verbunden."));
+      if (this.pendingTextRequest) return Promise.reject(new Error("Es läuft bereits eine Audio-Bewertung."));
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          if (this.pendingTextRequest) this.pendingTextRequest = null;
+          reject(new Error("Audio-Bewertung Timeout"));
+        }, timeoutMs);
+        this.pendingTextRequest = { resolve, reject, timer, text: "" };
+        const ok = this.send({
+          type: "response.create",
+          response: { output_modalities: ["text"], instructions }
+        });
+        if (!ok) {
+          clearTimeout(timer);
+          this.pendingTextRequest = null;
+          reject(new Error("Audio-Bewertung konnte nicht gestartet werden."));
+        }
       });
     }
 
@@ -246,6 +299,12 @@
       this.ready = false;
       this.userTranscript = "";
       this.assistantTranscript = "";
+      if (this.pendingTextRequest) {
+        const pending = this.pendingTextRequest;
+        this.pendingTextRequest = null;
+        clearTimeout(pending.timer);
+        pending.reject(new Error("Verbindung während Audio-Bewertung beendet."));
+      }
       if (wasConnected) this.emit("connected", false);
     }
   }

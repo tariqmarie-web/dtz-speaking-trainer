@@ -66,7 +66,7 @@ await check('Manifest gültiges JSON',async()=>{
 });
 await check('Service Worker erreichbar',async()=>{
   const r=await fetch(`${base}/sw.js`);const t=await r.text();
-  if(!t.includes('dtz-speaking-v1.1.1')) throw new Error('Cache-Version falsch');
+  if(!t.includes('dtz-speaking-v1.3.0')) throw new Error('Cache-Version falsch');
   return r.headers.get('content-type');
 });
 await check('Realtime ohne API-Key sauber abgelehnt',async()=>{
@@ -87,6 +87,53 @@ await check('Fremder Origin wird blockiert',async()=>{
   const r=await fetch(`${base}/api/realtime/connect`,{method:'POST',headers:{'content-type':'application/json','origin':'https://evil.example'},body:JSON.stringify({sdp:'v=0'})});
   if(r.status!==403) throw new Error(`HTTP ${r.status}`); return '403 erwartet';
 });
+
+await check('Prüfungsmodus hat zwei getrennte KI-Rollen',async()=>{
+  const app=await fs.readFile(path.join(__dirname,'app.js'),'utf8');
+  const server=await fs.readFile(path.join(__dirname,'server.js'),'utf8');
+  const html=await fs.readFile(path.join(__dirname,'index.html'),'utf8');
+  if(!app.includes("agentRole:'examiner'")||!app.includes("agentRole:'partner'")) throw new Error('Agentrollen fehlen in app.js');
+  if(!app.includes('switchToPartnerAgent')||!app.includes('handleLiveExamTurn')) throw new Error('Automatischer Prüfungsablauf fehlt');
+  if(!server.includes('ROLLE: KI-PRÜFERIN')||!server.includes('ROLLE: KI-GESPRÄCHSPARTNER')) throw new Error('Serverrollen fehlen');
+  if(!html.includes('examAgentLabel')||!html.includes('examPhaseStrip')) throw new Error('Prüfungsrollen/Phasen fehlen in UI');
+  return 'Prüferin + Gesprächspartner';
+});
+await check('Training verlangt sachliches Feedback und Worterklärung nur auf Anfrage',async()=>{
+  const server=await fs.readFile(path.join(__dirname,'server.js'),'utf8');
+  if(!server.includes('Lobe NICHT automatisch')) throw new Error('Anti-Überlob-Regel fehlt');
+  if(!server.includes('Erkläre neue Wörter nur, wenn der Lernende danach fragt')) throw new Error('Worterklärungsregel fehlt');
+  if(!server.includes('1–2 alltagsnahe Beispielsätze')) throw new Error('Beispielregel fehlt');
+  return 'sachlich + Worterklärung';
+});
+await check('Prüfung deaktiviert automatische KI-Antworten zwischen gesteuerten Schritten',async()=>{
+  const server=await fs.readFile(path.join(__dirname,'server.js'),'utf8');
+  if(!server.includes('create_response: mode !== "exam"')) throw new Error('Exam-Turn-Control fehlt');
+  return 'manuell gesteuerte Exam-State-Machine';
+});
+
+await check('DTZ-Bewertung ist kriteriumsorientiert und serverseitig bepunktet',async()=>{
+  const server=await fs.readFile(path.join(__dirname,'server.js'),'utf8');
+  if(!server.includes('B1_GUT')||!server.includes('A2_ERFUELLT')) throw new Error('DTZ-Bewertungsstufen fehlen');
+  if(!server.includes('pointsForBand')||!server.includes('DTZ_RUBRIC_VERSION')) throw new Error('Deterministische Punkte-Engine fehlt');
+  if(!server.includes('Teil 1A: B1')||!server.includes('Teil 3: B1')) throw new Error('Offizielle Kriterienbeschreibung fehlt');
+  return 'Band -> Punkte';
+});
+await check('Prüfungsbewertung verlangt Live-Audio-Evidenz',async()=>{
+  const app=await fs.readFile(path.join(__dirname,'app.js'),'utf8');
+  const server=await fs.readFile(path.join(__dirname,'server.js'),'utf8');
+  const rt=await fs.readFile(path.join(__dirname,'realtime.js'),'utf8');
+  if(!app.includes('collectRealtimeAudioAssessments')) throw new Error('Audio-Bewertung im Client fehlt');
+  if(!rt.includes('requestTextAssessment')) throw new Error('Realtime-Audioassessment fehlt');
+  if(!server.includes('audioAssessments.length < 2')) throw new Error('Server erzwingt Audioevidenz nicht');
+  return '2 Audio-Bewertungen erforderlich';
+});
+await check('Keine erfundene Ersatznote bei Bewertungsfehler',async()=>{
+  const app=await fs.readFile(path.join(__dirname,'app.js'),'utf8');
+  if(!app.includes('Es wird bewusst keine Ersatznote oder geschätzte Punktzahl angezeigt')) throw new Error('No-fake-score Regel fehlt');
+  if(/catch\(e\).*calculateScores\(\)/s.test(app)) throw new Error('Heuristischer Exam-Fallback noch aktiv');
+  return 'kein Heuristik-Fallback';
+});
+
 await check('Render Blueprint vorhanden',async()=>{
   const t=await fs.readFile(path.join(__dirname,'render.yaml'),'utf8');
   if(!t.includes('healthCheckPath: /api/health')||!t.includes('startCommand: npm start')) throw new Error('render.yaml unvollständig'); return 'ok';

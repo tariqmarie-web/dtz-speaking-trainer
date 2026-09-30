@@ -23,6 +23,11 @@ const state = {
   backendVersion: '',
   currentSpeechStartedAt: null,
   partMetrics: {},
+  examAutoFlow: true,
+  examTransitioning: false,
+  examFinishAfterResponse: false,
+  part3TurnsRequired: 4,
+  audioAssessments: [],
   history: JSON.parse(localStorage.getItem('dtzHistory') || 'null') || [
     {date:'01.09.',score:58},{date:'08.09.',score:63},{date:'15.09.',score:66},{date:'22.09.',score:68}
   ]
@@ -75,16 +80,16 @@ const trainingPrompts = {
 };
 
 const examParts = [
-  {id:'1A', title:'Teil 1A · Über sich sprechen', prompt:'Bitte stellen Sie sich kurz vor. Erzählen Sie etwas über Ihren Wohnort, Ihre Familie, Ihre Arbeit oder Ausbildung und Ihre Interessen.', max:5},
-  {id:'1B', title:'Teil 1B · Auf Nachfragen reagieren', prompt:'Ich stelle Ihnen jetzt noch eine Frage zu dem, was Sie gerade erzählt haben.', max:5},
-  {id:'2A', title:'Teil 2A · Bild beschreiben', prompt:'Bitte beschreiben Sie das Bild. Was sehen Sie? Was machen die Personen? Wo könnte die Situation sein?', max:10, image:true},
-  {id:'2B', title:'Teil 2B · Über Erfahrungen sprechen', prompt:'Haben Sie eine ähnliche Situation schon erlebt? Erzählen Sie bitte von Ihren eigenen Erfahrungen.', max:10, image:true},
-  {id:'3', title:'Teil 3 · Gemeinsam etwas planen', prompt:'Wir möchten für unseren Deutschkurs einen Ausflug organisieren. Ich finde Samstag gut, aber ich habe kein Auto. Was schlagen Sie vor?', max:20}
+  {id:'1A', phase:'1', phaseTitle:'Teil 1 · Sich vorstellen', title:'Teil 1A · Über sich sprechen', agentRole:'examiner', prompt:'Bitte stellen Sie sich kurz vor. Erzählen Sie etwas über Ihren Wohnort, Ihre Familie, Ihre Arbeit oder Ausbildung und Ihre Interessen.', max:5},
+  {id:'1B', phase:'1', phaseTitle:'Teil 1 · Sich vorstellen', title:'Teil 1B · Auf Nachfragen reagieren', agentRole:'examiner', prompt:'Die Prüferin stellt Ihnen jetzt eine sachliche Nachfrage zu Ihrer Vorstellung.', max:5},
+  {id:'2A', phase:'2', phaseTitle:'Teil 2 · Bild und Erfahrungen', title:'Teil 2A · Bild beschreiben', agentRole:'examiner', prompt:'Bitte beschreiben Sie das Bild. Was sehen Sie? Was machen die Personen? Wo könnte die Situation sein?', max:10, image:true},
+  {id:'2B', phase:'2', phaseTitle:'Teil 2 · Bild und Erfahrungen', title:'Teil 2B · Über Erfahrungen sprechen', agentRole:'examiner', prompt:'Die Prüferin fragt jetzt nach Ihren eigenen Erfahrungen zum Thema des Bildes.', max:10, image:true},
+  {id:'3', phase:'3', phaseTitle:'Teil 3 · Gemeinsam planen', title:'Teil 3 · Gemeinsam etwas planen', agentRole:'partner', prompt:'Planen Sie gemeinsam mit dem KI-Gesprächspartner einen Ausflug für den Deutschkurs.', max:20}
 ];
 
 function currentPart(){ return examParts[state.examIndex]; }
 function partMetric(id=currentPart()?.id){
-  if (!state.partMetrics[id]) state.partMetrics[id] = { userTurns:0, assistantTurns:0, speechMs:0, transcriptChars:0 };
+  if (!state.partMetrics[id]) state.partMetrics[id] = { userTurns:0, assistantTurns:0, speechMs:0, transcriptChars:0, agentRole:currentPart()?.agentRole || 'examiner' };
   return state.partMetrics[id];
 }
 
@@ -314,13 +319,15 @@ function analyzeTraining(text,topic){
   const connectors=(text.match(/\b(weil|deshalb|aber|trotzdem|wenn|dass|und|oder|dann|danach|zum Beispiel)\b/gi)||[]).length;
   const questions=(text.match(/\?/g)||[]).length;
   const filler=(text.match(/\b(äh|ähm|hm)\b/gi)||[]).length;
-  let good=[];let improve=[];
-  if(length>=20) good.push('Du hast ausführlich geantwortet.'); else improve.push('Versuche, deine Antwort um 1–2 Sätze zu verlängern.');
-  if(connectors>=2) good.push('Du verbindest Gedanken bereits gut.'); else improve.push('Nutze Verbindungswörter wie „weil“, „aber“, „deshalb“ oder „dann“.');
-  if(topic==='plan' && questions===0) improve.push('Stelle deinem Gesprächspartner auch mindestens eine Frage.');
-  if(filler>2) improve.push('Versuche kurze Denkpausen zu machen, statt viele Füllwörter zu verwenden.');
-  if(!good.length) good.push('Du hast die Aufgabe beantwortet und weitergesprochen.');
-  return {good,improve};
+  const observations=[];const improve=[];
+  if(length>=28) observations.push(`Antwortumfang: ausführlich (${length} Wörter).`);
+  else if(length>=12) observations.push(`Antwortumfang: ausreichend (${length} Wörter).`);
+  else improve.push('Antwort ist sehr kurz. Ergänze 1–2 konkrete Informationen oder eine Begründung.');
+  if(connectors>=2) observations.push('Mehrere Verbindungswörter wurden verwendet.');
+  else improve.push('Verbinde Aussagen gezielter, z. B. mit „weil“, „aber“, „deshalb“ oder „dann“.');
+  if(topic==='plan' && questions===0) improve.push('Im Planungsgespräch solltest du auch eine Rückfrage stellen.');
+  if(filler>2) improve.push('Viele Füllwörter erkannt. Nutze lieber kurze Denkpausen.');
+  return {observations,improve};
 }
 
 const realtime = window.DTZRealtimeClient ? new window.DTZRealtimeClient({
@@ -336,6 +343,9 @@ const realtime = window.DTZRealtimeClient ? new window.DTZRealtimeClient({
     if(state.liveMode==='exam') {
       $('#examMicBtn').textContent=connected ? '🎙 Live-Mikrofon an' : '🎙 Aufnahme-Fallback';
       $('#examListenBtn').disabled=connected;
+      $('#examNextBtn')?.classList.toggle('hidden',connected);
+      $('.exam-transcript')?.classList.toggle('hidden',connected);
+      updateExamRoleUi();
     }
   },
   listening: (listening)=>{
@@ -345,7 +355,7 @@ const realtime = window.DTZRealtimeClient ? new window.DTZRealtimeClient({
     else if(state.liveMode==='exam' && state.currentSpeechStartedAt){ partMetric().speechMs += Date.now()-state.currentSpeechStartedAt; state.currentSpeechStartedAt=null; }
   },
   speaking: (speaking)=>{
-    if(state.liveMode==='exam' && speaking) $('#examStatusText').textContent='KI-Prüfungspartner spricht …';
+    if(state.liveMode==='exam' && speaking) $('#examStatusText').textContent=currentPart()?.agentRole==='partner'?'KI-Gesprächspartner spricht …':'KI-Prüferin spricht …';
     if(state.liveMode==='training' && speaking) $('#trainingStatusText').textContent='KI-Trainer spricht …';
   },
   userTranscriptDelta: ({text})=>{
@@ -360,6 +370,7 @@ const realtime = window.DTZRealtimeClient ? new window.DTZRealtimeClient({
     box.dataset.committed=merged;box.value=merged;
     if(state.liveMode==='exam'){
       const m=partMetric();m.userTurns++;m.transcriptChars=merged.length;
+      handleLiveExamTurn(text).catch(err=>{ console.error(err); $('#examStatusText').textContent=`Prüfungsablauf-Fehler: ${friendlyLiveError(err)}`; state.examTransitioning=false; });
     }
   },
   assistantTranscriptDelta: ({text})=>{
@@ -371,19 +382,39 @@ const realtime = window.DTZRealtimeClient ? new window.DTZRealtimeClient({
     if(text) target.textContent=text;
     if(state.liveMode==='exam') partMetric().assistantTurns++;
   },
+  responseDone: ()=>{
+    if(state.liveMode==='exam' && state.examFinishAfterResponse){
+      state.examFinishAfterResponse=false;
+      setTimeout(()=>finishExam(),600);
+    }
+  },
   error: (e)=>console.warn('Realtime error',e)
 }) : null;
 
 function examSessionInstructions(part){
   const photo=currentExamPhoto();
+  if(part.agentRole==='partner'){
+    return `Du bist der KI-Gesprächspartner (Kandidat B) in Teil 3 der DTZ-Sprechsimulation. Führe ein sachliches Planungsgespräch. Reagiere konkret, stelle Rückfragen, bringe eigene Vorschläge und realistische Einwände ein. Stimme nicht automatisch zu. Keine Korrektur, keine Sprachhilfe, kein Lob, keine Punkte.`;
+  }
   const rules={
-    '1A':'Lass den Kandidaten sich selbstständig vorstellen. Unterbrich nicht mit einer Stichpunktliste.',
-    '1B':'Stelle eine natürliche Nachfrage, die sich direkt auf die vorherige Vorstellung bezieht.',
-    '2A':`Lass den Kandidaten das angezeigte Foto beschreiben. Die interne Bildreferenz lautet: ${photo.expected} Korrigiere die Beschreibung während der Prüfung nicht und verrate keine Bilddetails, bevor der Kandidat sie selbst erwähnt. Frage nur knapp nach, wenn er sehr früh endet.`,
-    '2B':`Frage nach einer persönlichen Erfahrung passend zum zuvor gezeigten Foto. Nutze diese thematische Nachfrage: ${photo.followUp || 'Erzähle von einer ähnlichen Erfahrung.'} Interne Bildreferenz: ${photo.expected}`,
-    '3':'Sei zweiter Teilnehmer beim gemeinsamen Planen. Stimme nicht allem zu. Bringe einen realistischen Einwand oder Gegenvorschlag ein und reagiere auf den Kandidaten.'
+    '1A':'Bitte den Kandidaten sachlich, sich vorzustellen. Lass ihn selbstständig sprechen.',
+    '1B':'Stelle genau eine natürliche, prüfungsnahe Nachfrage zu seiner vorherigen Vorstellung.',
+    '2A':`Bitte den Kandidaten, das sichtbare Foto zu beschreiben. Interne Bildreferenz: ${photo.expected}. Verrate keine Bilddetails.`,
+    '2B':`Stelle eine sachliche Frage nach eigenen Erfahrungen passend zum Foto. Nutze als Orientierung: ${photo.followUp || 'Erzählen Sie von einer ähnlichen Erfahrung.'}`
   };
-  return `Du bist ein KI-Prüfungspartner für eine DTZ-Sprechsimulation. Aktueller Prüfungsteil: ${part.id}. ${rules[part.id]} Sprich klares natürliches Deutsch. Keine Korrektur, keine Übersetzung, keine Musterantwort, keine Punkte oder Niveauhinweise. Reagiere auf den konkreten Inhalt. Bleibe ausschließlich in Teil ${part.id}, bis die Anwendung umschaltet.`;
+  return `Du bist die KI-Prüferin. Auftreten: neutral, ernsthaft, höflich, knapp. Aktueller interner Teil ${part.id}. ${rules[part.id]||''} Keine Korrektur, keine Übersetzung, keine Musterantwort, kein Lob oder Tadel, keine Punkte oder Niveauhinweise.`;
+}
+
+function examAgentLabel(part=currentPart()){
+  return part?.agentRole==='partner' ? 'KI-Gesprächspartner · Kandidat B' : 'KI-Prüferin';
+}
+
+function updateExamRoleUi(){
+  const part=currentPart();
+  const label=$('#examAgentLabel'); if(label) label.textContent=examAgentLabel(part);
+  const avatar=$('#examAvatar'); if(avatar){ avatar.textContent=part?.agentRole==='partner'?'B':'P'; avatar.classList.toggle('partner-role',part?.agentRole==='partner'); }
+  const strip=$('#examPhaseStrip');
+  strip?.querySelectorAll('[data-phase]').forEach(el=>el.classList.toggle('active',el.dataset.phase===part?.phase));
 }
 
 async function startRealtime(mode){
@@ -397,14 +428,69 @@ async function startRealtime(mode){
     ? `${currentTrainingPhoto().prompt} Interne Bildreferenz: ${currentTrainingPhoto().expected}`
     : trainingPrompts[state.trainingTopic];
   const opts=mode==='exam'
-    ? {mode:'exam',examPart:currentPart().id,scenario:examScenario}
-    : {mode:'training',trainingTopic:state.trainingTopic,scenario:trainingScenario};
+    ? {mode:'exam',examPart:currentPart().id,agentRole:currentPart().agentRole,scenario:examScenario}
+    : {mode:'training',trainingTopic:state.trainingTopic,agentRole:'trainer',scenario:trainingScenario};
   state.liveMode=mode;
   await realtime.connect(opts);
   if(mode==='exam'){
-    realtime.startPrompt(`Beginne jetzt Prüfungsteil ${currentPart().id}. Formuliere eine kurze natürliche Aufgabenstellung entsprechend diesem Ziel: ${currentPart().prompt}. Danach warte auf die Antwort.`);
+    if(currentPart().agentRole==='partner'){
+      realtime.startPrompt('Beginne Teil 3 als zweiter Prüfungsteilnehmer. Mache einen kurzen eigenen Vorschlag zur gemeinsamen Planung und frage den Kandidaten nach seiner Meinung. Bleibe sachlich und hilf sprachlich nicht.');
+    }else{
+      realtime.startPrompt(`Beginne die Prüfung sachlich. Formuliere genau die Aufgabe für ${currentPart().id}: ${currentPart().prompt}. Keine einleitende Plauderei, kein Lob. Danach warte.`);
+    }
   } else {
-    realtime.startPrompt(`Beginne jetzt ein natürliches Sprechtraining zum Schwerpunkt ${state.trainingTopic}. Stelle genau eine passende Einstiegsfrage. Das Ausgangsthema lautet: ${trainingPrompts[state.trainingTopic]}`);
+    realtime.startPrompt(`Beginne jetzt ein natürliches Sprechtraining zum Schwerpunkt ${state.trainingTopic}. Stelle genau eine passende Einstiegsfrage. Das Ausgangsthema lautet: ${trainingPrompts[state.trainingTopic]}. Bewerte später sachlich; kein pauschales Lob.`);
+  }
+}
+
+async function advanceExamInternal(targetIndex, promptInstruction){
+  saveCurrentExamAnswer();
+  state.examIndex=targetIndex;
+  loadExamPart();
+  if(!state.realtimeConnected) return;
+  realtime.updateInstructions(examSessionInstructions(currentPart()));
+  realtime.startPrompt(promptInstruction);
+}
+
+async function switchToPartnerAgent(){
+  if(state.examTransitioning) return;
+  state.examTransitioning=true;
+  saveCurrentExamAnswer();
+  if(realtime && state.realtimeConnected) await realtime.disconnect();
+  state.examIndex=4;
+  loadExamPart();
+  try{ await startRealtime('exam'); }
+  finally{ state.examTransitioning=false; }
+}
+
+async function handleLiveExamTurn(text){
+  if(!state.examAutoFlow || state.examTransitioning || !state.realtimeConnected) return;
+  state.examTransitioning=true;
+  const id=currentPart()?.id;
+  try{
+    if(id==='1A'){
+      await advanceExamInternal(1,`Stelle jetzt genau eine sachliche Nachfrage, die sich direkt auf diese Vorstellung bezieht: ${text}. Keine Bewertung und kein Lob.`);
+    }else if(id==='1B'){
+      await advanceExamInternal(2,'Leite ohne Kommentar zu Teil 2 über. Bitte den Kandidaten sachlich, das sichtbare Foto zu beschreiben. Danach warte.');
+    }else if(id==='2A'){
+      const follow=currentExamPhoto().followUp || 'Erzählen Sie bitte von einer ähnlichen Erfahrung.';
+      await advanceExamInternal(3,`Stelle jetzt genau eine sachliche Nachfrage nach eigenen Erfahrungen zum Bildthema. Orientierung: ${follow}. Keine Bewertung.`);
+    }else if(id==='2B'){
+      state.examTransitioning=false;
+      await switchToPartnerAgent();
+      return;
+    }else if(id==='3'){
+      saveCurrentExamAnswer();
+      const turns=partMetric('3').userTurns;
+      if(turns>=state.part3TurnsRequired){
+        state.examFinishAfterResponse=true;
+        realtime.startPrompt('Reagiere noch einmal kurz als Gesprächspartner, bringt den gemeinsamen Plan zu einem natürlichen Abschluss und verabschiede dich knapp. Keine Bewertung.');
+      }else{
+        realtime.startPrompt('Reagiere als Kandidat B direkt auf den letzten Vorschlag. Bringe einen eigenen Vorschlag, eine Rückfrage oder einen realistischen Einwand ein, damit die gemeinsame Planung weitergeht. Keine Sprachhilfe und kein Lob.');
+      }
+    }
+  } finally {
+    if(id!=='2B') state.examTransitioning=false;
   }
 }
 
@@ -444,7 +530,7 @@ $('#trainingMicBtn').addEventListener('click',()=>{
     box.dataset.committed=text;
     const a=analyzeTraining(text,state.trainingTopic);
     const f=$('#trainingFeedback');
-    f.innerHTML=`<strong>Coach-Feedback (lokaler Fallback)</strong><p><b>Gut:</b> ${a.good.join(' ')}</p><p><b>Nächster Schritt:</b> ${a.improve.join(' ')||'Sehr gut – versuche die Antwort jetzt noch einmal etwas spontaner.'}</p>`;
+    f.innerHTML=`<strong>Sachliches Coach-Feedback (lokaler Fallback)</strong><p><b>Beobachtung:</b> ${a.observations.join(' ')||'Keine besondere Stärke sicher ableitbar.'}</p><p><b>Nächster Schritt:</b> ${a.improve.join(' ')||'Die Antwort ist ausreichend. Wiederhole sie noch einmal möglichst klar und ohne zusätzliche Hilfen.'}</p>`;
     f.classList.remove('hidden');
     if(state.trainingTopic==='plan'){
       const response = /zug/i.test(text) ? 'Mit dem Zug finde ich auch gut. Wann sollten wir losfahren?' : /auto/i.test(text) ? 'Mit dem Auto wäre praktisch. Aber ich habe kein Auto. Welche Alternative hätten wir?' : 'Das ist eine Idee. Wie könnten wir die Anreise organisieren?';
@@ -476,7 +562,7 @@ $('#examNextBtn').addEventListener('click',nextExamPart);
 
 async function beginExam(){
   if(realtime) await realtime.disconnect();
-  state.examIndex=0;state.examSeconds=16*60;state.examAnswers=[];state.partMetrics={};state.realtimeMuted=false;state.examPhotoIndex=Math.floor(Math.random()*photoTasks.length);
+  state.examIndex=0;state.examSeconds=16*60;state.examAnswers=[];state.partMetrics={};state.realtimeMuted=false;state.examTransitioning=false;state.examFinishAfterResponse=false;state.examPhotoIndex=Math.floor(Math.random()*photoTasks.length);
   $('#examIntro').classList.add('hidden');$('#examResult').classList.add('hidden');$('#examRoom').classList.remove('hidden');
   loadExamPart();startTimer();setView('exam');
   if(state.openaiConfigured && realtime){
@@ -489,23 +575,30 @@ async function beginExam(){
 function loadExamPart(){
   const part=currentPart();
   const displayedPrompt = part.id==='2B' ? (currentExamPhoto().followUp || part.prompt) : part.prompt;
-  $('#examPartTitle').textContent=part.title;$('#examPrompt').textContent=displayedPrompt;$('#examTranscript').value='';$('#examTranscript').dataset.committed='';
+  $('#examPartTitle').textContent=part.phaseTitle;
+  const detail=$('#examPartDetail'); if(detail) detail.textContent=part.title;
+  $('#examPrompt').textContent=displayedPrompt;
+  $('#examTranscript').value='';$('#examTranscript').dataset.committed='';
   renderExamPhoto();
-  $('#examProgressBar').style.width=`${(state.examIndex/examParts.length)*100}%`;
-  $('#examNextBtn').textContent=state.examIndex===examParts.length-1?'Prüfung beenden':'Nächster Teil';
-  $('#examStatusText').textContent=state.realtimeConnected?'Live-Mikrofon aktiv – einfach sprechen':'Bereit';
+  updateExamRoleUi();
+  const phaseProgress=part.phase==='1'?18:part.phase==='2'?52:82;
+  $('#examProgressBar').style.width=`${phaseProgress}%`;
+  $('#examNextBtn').textContent=part.id==='3'?'Prüfung beenden':'Nächster Abschnitt';
+  $('#examNextBtn').classList.toggle('hidden',state.realtimeConnected);
+  $('.exam-transcript')?.classList.toggle('hidden',state.realtimeConnected);
+  $('#examStatusText').textContent=state.realtimeConnected?'Prüfung läuft – bitte sprechen':'Bereit';
   partMetric(part.id);
 }
 
 async function nextExamPart(){
+  if(state.realtimeConnected){
+    $('#examStatusText').textContent='Im Live-Prüfungsmodus wechselt die Prüfung automatisch.';
+    return;
+  }
   saveCurrentExamAnswer();
   if(state.examIndex>=examParts.length-1){await finishExam();return;}
   state.examIndex++;loadExamPart();
-  if(state.realtimeConnected){
-    realtime.cancelResponse();
-    realtime.updateInstructions(examSessionInstructions(currentPart()));
-    realtime.startPrompt(`Wechsle jetzt ausschließlich zu Prüfungsteil ${currentPart().id}. Stelle die passende Aufgabe natürlich: ${$('#examPrompt').textContent}. Berücksichtige den bisherigen Gesprächskontext, wenn der Teil darauf aufbaut.`);
-  } else speak($('#examPrompt').textContent,0.92);
+  speak($('#examPrompt').textContent,0.92);
 }
 
 function saveCurrentExamAnswer(){
@@ -528,7 +621,7 @@ $('#examMicBtn').addEventListener('click',()=>{
     if(final){box.value=final;box.dataset.committed=final;const m=partMetric();m.userTurns++;m.transcriptChars=final.length;if(state.currentSpeechStartedAt)m.speechMs+=Date.now()-state.currentSpeechStartedAt;}
     if(currentPart().id==='3' && box.value.trim()){
       const t=box.value.toLowerCase();
-      let response='Das klingt möglich. Was sollten wir noch organisieren?';
+      let response='Was sollten wir noch organisieren?';
       if(t.includes('auto')) response='Mit dem Auto wäre praktisch, aber ich habe kein Auto. Vielleicht könnten wir mit dem Zug fahren?';
       else if(t.includes('zug')) response='Mit dem Zug bin ich einverstanden. Wann sollten wir losfahren und wo treffen wir uns?';
       else if(t.includes('samstag')) response='Samstag passt mir auch. Ich möchte aber nicht zu spät zurückkommen. Was meinst du?';
@@ -549,41 +642,50 @@ function startTimer(){
   },1000);
 }
 
-function rubricLevel(ratio, levels){
-  if(ratio>=.85)return levels[0];if(ratio>=.72)return levels[1];if(ratio>=.58)return levels[2];if(ratio>=.44)return levels[3];if(ratio>=.25)return levels[4];return 0;
-}
-function heuristicPartScore(text,max){
-  const words=text.split(/\s+/).filter(Boolean); const w=words.length;
-  const connectors=(text.match(/\b(weil|deshalb|aber|trotzdem|wenn|dass|und|oder|dann|danach|zuerst|später)\b/gi)||[]).length;
-  const interaction=(text.match(/\b(was meinst du|wie findest du|können wir|sollen wir|vielleicht|ich schlage vor|einverstanden|lieber)\b/gi)||[]).length;
-  let ratio=Math.min(1,w/32)*.65 + Math.min(1,connectors/3)*.2 + Math.min(1,interaction/2)*.15;
-  const levels=max===5?[5,4,3,2,1]:max===10?[10,8,6,4,2]:[20,16,12,8,4];
-  return rubricLevel(ratio,levels);
-}
-function calculateScores(){
-  const taskScores={};
-  state.examAnswers.forEach(a=>taskScores[a.id]=heuristicPartScore(a.text,a.max));
-  examParts.forEach(p=>{if(taskScores[p.id]==null)taskScores[p.id]=0;});
-  const allText=state.examAnswers.map(a=>a.text).join(' ');
-  const words=allText.split(/\s+/).filter(Boolean); const unique=new Set(words.map(w=>w.toLowerCase().replace(/[^a-zäöüß]/g,''))).size;
-  const connectorCount=(allText.match(/\b(weil|deshalb|aber|trotzdem|wenn|dass|dann|danach|obwohl|damit)\b/gi)||[]).length;
-  const sentenceCount=Math.max(1,(allText.match(/[.!?]/g)||[]).length);
-  const avgLen=words.length/sentenceCount;
-  const pronunciation = words.length>=45 ? 8 : words.length>=25 ? 6 : words.length>=12 ? 4 : 2;
-  const fluency = words.length>=70 ? 8 : words.length>=45 ? 6 : words.length>=25 ? 4 : 2;
-  const accuracy = connectorCount>=5 && avgLen>7 ? 12 : connectorCount>=3 ? 9 : connectorCount>=1 ? 6 : 3;
-  const vocabRatio = unique/Math.max(1,words.length);
-  const vocabulary = words.length>=70 && vocabRatio>.55 ? 12 : words.length>=45 ? 9 : words.length>=20 ? 6 : 3;
-  const taskTotal=Object.values(taskScores).reduce((a,b)=>a+b,0);
-  const total=Math.min(100,taskTotal+pronunciation+fluency+accuracy+vocabulary);
-  return {taskScores,pronunciation,fluency,accuracy,vocabulary,total,level:total>=75?'B1':total>=35?'A2':'unter A2',evaluationBasis:'local-heuristic',strengths:[],priorities:[]};
+function parseJsonObject(text){
+  const raw=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+  try{return JSON.parse(raw);}catch{}
+  const start=raw.indexOf('{'), end=raw.lastIndexOf('}');
+  if(start>=0 && end>start) return JSON.parse(raw.slice(start,end+1));
+  throw new Error('Audio-Bewertung war nicht als JSON lesbar.');
 }
 
-async function requestAiEvaluation(){
+function audioAssessmentPrompt(label){
+  return `Du bist ${label}, ein VERDECKTER Audio-Bewerter nach den DTZ-Sprechkriterien. Antworte ausschließlich als kompaktes JSON und erzeuge KEINE Audioausgabe. Bewerte NUR die tatsächliche Stimme und Sprechweise des KANDIDATEN (user), nicht die Stimmen der KI-Prüferin oder des KI-Gesprächspartners.
+
+Bewerte zwei Kriterien über die gesamte bisherige mündliche Prüfung:
+1) Aussprache/Intonation:
+- B1: gut verständlich; fremdsprachiger Akzent und einzelne Aussprachefehler sind erlaubt, solange Verständlichkeit erhalten bleibt.
+- A2: im Allgemeinen verständlich trotz deutlichem Akzent; gelegentlich kann Wiederholung nötig sein.
+- A1: sehr begrenztes Repertoire nur mit Mühe verständlich.
+2) Flüssigkeit:
+- B1: verständlich und ohne viel Stocken; deutliche Planungs-/Korrekturpausen sind erlaubt.
+- A2: kurze vertraute Gespräche möglich, aber häufiges Stocken und Neuansetzen.
+- A1: sehr kurze, isolierte Äußerungen mit vielen Suchpausen und Abbrüchen.
+
+Stufen: B1_GUT, B1_ERFUELLT, A2_GUT, A2_ERFUELLT, A1_ERFUELLT, 0.
+"GUT" nur wählen, wenn die Niveaubeschreibung klar und stabil erfüllt ist. Im Grenzfall konservativ entscheiden. Kein Gefälligkeitslob.
+
+JSON-Schema exakt:
+{"pronunciationBand":"...","fluencyBand":"...","pronunciationEvidence":["..."],"fluencyEvidence":["..."]}`;
+}
+
+async function collectRealtimeAudioAssessments(){
+  if(!realtime || !state.realtimeConnected || typeof realtime.requestTextAssessment!=='function'){
+    throw new Error('Für Aussprache/Intonation und Flüssigkeit ist eine aktive Live-KI-Prüfung erforderlich.');
+  }
+  realtime.setMuted(true);
+  $('#examStatusText').textContent='Aussprache und Flüssigkeit werden nach DTZ-Kriterien ausgewertet …';
+  const first=parseJsonObject(await realtime.requestTextAssessment(audioAssessmentPrompt('Audio-Bewerter A')));
+  const second=parseJsonObject(await realtime.requestTextAssessment(audioAssessmentPrompt('Audio-Bewerter B. Bewerte unabhängig neu und ignoriere frühere Bewertungsurteile')));
+  return [first,second];
+}
+
+async function requestAiEvaluation(audioAssessments){
   if(!state.openaiConfigured) throw new Error('KI-Bewertung nicht konfiguriert');
   const r=await fetch('/api/exam/evaluate',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({answers:state.examAnswers,interactionMetrics:state.partMetrics})
+    body:JSON.stringify({answers:state.examAnswers,interactionMetrics:state.partMetrics,audioAssessments})
   });
   const data=await r.json();
   if(!r.ok) throw new Error(data.detail||data.error||'KI-Bewertung fehlgeschlagen');
@@ -593,28 +695,38 @@ async function requestAiEvaluation(){
 function fmt(n){ return Number.isInteger(n)?String(n):Number(n).toFixed(1).replace('.',','); }
 function renderExamResult(s){
   $('#examRoom').classList.add('hidden');$('#examResult').classList.remove('hidden');
-  $('#resultScore').textContent=fmt(s.total);$('#resultLevel').textContent=`${s.level}-Einschätzung`;
-  $('#resultBasis').textContent=s.evaluationBasis==='transcript+interaction-metrics'
-    ? `Zwei unabhängige KI-Bewerter · Transkript + Interaktionsdaten · Sicherheit ${Math.round((s.confidence||0)*100)} % · kein offizielles Prüfungsergebnis`
-    : 'Lokale Demo-Heuristik · kein offizielles Prüfungsergebnis';
+  $('#resultScore').textContent=fmt(s.total);$('#resultLevel').textContent=`${s.level} · DTZ-Sprechsimulation`;
+  $('#resultBasis').textContent=`Bewertung nach hinterlegten DTZ-Sprechkriterien · 2 Transkript-Bewerter + 2 Live-Audio-Bewertungen · ${s.rubricVersion||'DTZ-Raster'} · kein offizielles Zertifikat`;
+  const bandText=(key)=>{ const pair=s.criterionBands?.[key]; if(!pair)return ''; return pair.map(x=>s.bandLabels?.[x]||x).join(' / '); };
+  const taskBand=(id)=>{ const pair=s.criterionBands?.taskAchievement?.[id]; if(!pair)return ''; return pair.map(x=>s.bandLabels?.[x]||x).join(' / '); };
+  const evidenceHtml=(title,items)=>items?.length?`<details class="rubric-evidence"><summary>${escapeHtml(title)} – Begründung</summary><ul>${items.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></details>`:'';
   $('#scoreTable').innerHTML=`
-    <div class="score-row"><span>Teil 1A · Über sich sprechen</span><b>${fmt(s.taskScores['1A'])}/5</b></div>
-    <div class="score-row"><span>Teil 1B · Nachfragen</span><b>${fmt(s.taskScores['1B'])}/5</b></div>
-    <div class="score-row"><span>Teil 2A · Bildbeschreibung</span><b>${fmt(s.taskScores['2A'])}/10</b></div>
-    <div class="score-row"><span>Teil 2B · Erfahrungen</span><b>${fmt(s.taskScores['2B'])}/10</b></div>
-    <div class="score-row"><span>Teil 3 · Gemeinsam planen</span><b>${fmt(s.taskScores['3'])}/20</b></div>
-    <div class="score-row"><span>Aussprache / Intonation</span><b>${fmt(s.pronunciation)}/10</b></div>
-    <div class="score-row"><span>Flüssigkeit</span><b>${fmt(s.fluency)}/10</b></div>
-    <div class="score-row"><span>Korrektheit</span><b>${fmt(s.accuracy)}/15</b></div>
-    <div class="score-row"><span>Wortschatz</span><b>${fmt(s.vocabulary)}/15</b></div>
+    <div class="score-row"><span>Teil 1A · Über sich sprechen<small>${taskBand('1A')}</small></span><b>${fmt(s.taskScores['1A'])}/5</b></div>
+    ${evidenceHtml('Teil 1A',s.evidence?.taskAchievement?.['1A'])}
+    <div class="score-row"><span>Teil 1B · Auf Nachfragen reagieren<small>${taskBand('1B')}</small></span><b>${fmt(s.taskScores['1B'])}/5</b></div>
+    ${evidenceHtml('Teil 1B',s.evidence?.taskAchievement?.['1B'])}
+    <div class="score-row"><span>Teil 2A · Bildbeschreibung<small>${taskBand('2A')}</small></span><b>${fmt(s.taskScores['2A'])}/10</b></div>
+    ${evidenceHtml('Teil 2A',s.evidence?.taskAchievement?.['2A'])}
+    <div class="score-row"><span>Teil 2B · Eigene Erfahrungen<small>${taskBand('2B')}</small></span><b>${fmt(s.taskScores['2B'])}/10</b></div>
+    ${evidenceHtml('Teil 2B',s.evidence?.taskAchievement?.['2B'])}
+    <div class="score-row"><span>Teil 3 · Gemeinsam planen<small>${taskBand('3')}</small></span><b>${fmt(s.taskScores['3'])}/20</b></div>
+    ${evidenceHtml('Teil 3',s.evidence?.taskAchievement?.['3'])}
+    <div class="score-row"><span>Aussprache / Intonation<small>${bandText('pronunciation')}</small></span><b>${fmt(s.pronunciation)}/10</b></div>
+    ${evidenceHtml('Aussprache / Intonation',s.evidence?.pronunciation)}
+    <div class="score-row"><span>Flüssigkeit<small>${bandText('fluency')}</small></span><b>${fmt(s.fluency)}/10</b></div>
+    ${evidenceHtml('Flüssigkeit',s.evidence?.fluency)}
+    <div class="score-row"><span>Korrektheit<small>${bandText('accuracy')}</small></span><b>${fmt(s.accuracy)}/15</b></div>
+    ${evidenceHtml('Korrektheit',s.evidence?.accuracy)}
+    <div class="score-row"><span>Wortschatz<small>${bandText('vocabulary')}</small></span><b>${fmt(s.vocabulary)}/15</b></div>
+    ${evidenceHtml('Wortschatz',s.evidence?.vocabulary)}
     <div class="score-row total"><span>Gesamt</span><b>${fmt(s.total)}/100</b></div>
-    ${s.scoreA!=null?`<p class="muted">Evaluator A: ${fmt(s.scoreA)} · Evaluator B: ${fmt(s.scoreB)} · Abweichung: ${fmt(s.disagreement)} Punkte. Audio-spezifische Aussprachebewertung ist in diesem Entwicklungsschritt noch nicht vollständig kalibriert.</p>`:'<p class="muted">Fallback: Textbasierte Demo-Heuristik. Für belastbare Aussprachebewertung ist die Audio-Evaluationsstufe noch erforderlich.</p>'}`;
+    <p class="muted">Bewertung A: ${fmt(s.scoreA)} · Bewertung B: ${fmt(s.scoreB)} · Abweichung: ${fmt(s.disagreement)} Punkte. Die Einstufung folgt dem hinterlegten DTZ-Punkteschema: 75–100 B1, 35–74,5 A2, darunter unter A2.</p>`;
   const strengths=s.strengths?.length?s.strengths:[];
   const focus=s.priorities?.length?s.priorities:[];
   if(!strengths.length){
-    if(s.vocabulary>=9)strengths.push('Dein Wortschatz reicht für viele Alltagssituationen gut aus.');
-    if(s.fluency>=6)strengths.push('Du kannst bereits zusammenhängend sprechen.');
-    if(s.taskScores['3']>=12)strengths.push('Du beteiligst dich sinnvoll an Planungsgesprächen.');
+    if(s.vocabulary>=12)strengths.push('Wortschatz: in den vorliegenden Antworten klar über dem Mindestniveau der Simulation.');
+    if(s.fluency>=8)strengths.push('Flüssigkeit: überwiegend zusammenhängende Äußerungen in der vorliegenden Evidenz.');
+    if(s.taskScores['3']>=16)strengths.push('Teil 3: Vorschläge und Reaktionen wurden überzeugend in die Planung eingebracht.');
   }
   if(!focus.length){
     if(s.vocabulary<9)focus.push('Wortschatz für Alltag, Planung und Begründungen erweitern.');
@@ -622,7 +734,7 @@ function renderExamResult(s){
     if(s.taskScores['3']<12)focus.push('Mehr eigene Vorschläge, Rückfragen und Gegenvorschläge in Teil 3 verwenden.');
     if(s.accuracy<9)focus.push('Grammatik im freien Sprechen stabilisieren.');
   }
-  $('#strengthsList').innerHTML=(strengths.length?strengths:['Du hast alle Prüfungsteile bearbeitet.']).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  $('#strengthsList').innerHTML=(strengths.length?strengths:['Keine besondere Stärke mit ausreichender Evidenz hervorgehoben.']).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
   $('#focusList').innerHTML=(focus.length?focus:['Ergebnis mit weiteren prüfungsnahen Aufgaben stabilisieren.']).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
   const now=new Date();state.history.push({date:`${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.`,score:Number(s.total)});
   state.history=state.history.slice(-8);localStorage.setItem('dtzHistory',JSON.stringify(state.history));
@@ -632,16 +744,33 @@ function renderExamResult(s){
 
 function escapeHtml(text){return String(text).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 
+function renderEvaluationError(error){
+  $('#examRoom').classList.add('hidden');
+  $('#examResult').classList.remove('hidden');
+  $('#resultScore').textContent='—';
+  $('#resultLevel').textContent='Bewertung nicht abgeschlossen';
+  $('#resultBasis').textContent='Es wird bewusst keine Ersatznote oder geschätzte Punktzahl angezeigt.';
+  $('#scoreTable').innerHTML=`<div class="notice"><strong>DTZ-Bewertung konnte nicht erstellt werden.</strong><p>${escapeHtml(friendlyLiveError(error))}</p><p>Für eine vollständige Bewertung müssen Live-Audio, Transkript und beide KI-Bewertungen verfügbar sein. Bitte die Simulation mit Live-KI erneut durchführen.</p></div>`;
+  $('#strengthsList').innerHTML='<li>Keine Bewertung ohne ausreichende Evidenz.</li>';
+  $('#focusList').innerHTML='<li>Prüfung erneut mit stabiler Live-KI-Verbindung durchführen.</li>';
+}
+
 async function finishExam(){
   if(!state.timer && $('#examRoom').classList.contains('hidden')) return;
   clearInterval(state.timer);state.timer=null;saveCurrentExamAnswer();
-  if(realtime && state.realtimeConnected) await realtime.disconnect();
-  $('#examStatusText').textContent='Bewertung läuft …';
+  $('#examStatusText').textContent='DTZ-Bewertung wird erstellt …';
   $('#globalStatus').textContent='Bewertung …';
-  let result;
-  try{ result=await requestAiEvaluation(); }
-  catch(e){ console.warn(e);result=calculateScores(); }
-  renderExamResult(result);
+  try{
+    state.audioAssessments = await collectRealtimeAudioAssessments();
+    if(realtime && state.realtimeConnected) await realtime.disconnect();
+    $('#examStatusText').textContent='Aufgabenbewältigung, Korrektheit und Wortschatz werden bewertet …';
+    const result=await requestAiEvaluation(state.audioAssessments);
+    renderExamResult(result);
+  }catch(e){
+    console.warn('DTZ-Bewertung fehlgeschlagen',e);
+    if(realtime && state.realtimeConnected) await realtime.disconnect();
+    renderEvaluationError(e);
+  }
   $('#globalStatus').textContent='Bereit';
 }
 

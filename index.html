@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="assets/icon-192.png" />
   <link rel="apple-touch-icon" href="assets/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=1.1.1" />
+  <link rel="stylesheet" href="styles.css?v=1.3.0" />
 </head>
 <body>
   <div class="app-shell">
@@ -148,7 +148,7 @@
             <div class="skill-row"><span>Interaktion</span><b>Priorität hoch</b></div>
             <div class="skill-row"><span>Grammatik</span><b>mittel</b></div>
             <hr />
-            <p class="muted">Im Training darf die KI korrigieren, bessere Formulierungen zeigen und dich denselben Satz noch einmal sprechen lassen.</p>
+            <p class="muted">Der KI-Trainer bewertet sachlich und ohne automatisches Lob. Konkretes Lob gibt es nur bei klar erkennbaren Stärken. Du kannst jederzeit fragen: „Was bedeutet …?“ – dann erklärt der Trainer das Wort kurz mit Beispielen.</p>
           </aside>
         </div>
       </section>
@@ -156,8 +156,9 @@
       <section class="view" id="view-exam">
         <div class="card exam-intro" id="examIntro">
           <span class="badge danger">Prüfungsmodus</span>
-          <h2>DTZ-Sprechprüfung simulieren</h2>
-          <p>Die Simulation bildet Teil 1A, 1B, 2A, 2B und Teil 3 ab. Während der Prüfung gibt es keine Korrekturen, keine Punkte und keine Hilfestellungen.</p>
+          <h2>DTZ-Sprechprüfung realistisch simulieren</h2>
+          <p>Die Simulation läuft in drei Prüfungsphasen: <b>1. Sich vorstellen</b> mit Nachfragen der KI-Prüferin, <b>2. Bild beschreiben und über eigene Erfahrungen sprechen</b> mit der KI-Prüferin und <b>3. Gemeinsam etwas planen</b> mit einem separaten KI-Gesprächspartner.</p>
+          <div class="exam-role-note"><span>👩‍💼 <b>KI-Prüferin:</b> neutral, ernsthaft, keine Hilfe</span><span>🗣️ <b>KI-Gesprächspartner:</b> Teil 3, echte Planung und Gegenpositionen</span></div>
           <p class="device-note">Optimiert für PC, Android-Smartphone und Tablet. Auf Mobilgeräten bitte Hoch- oder Querformat nach Wunsch verwenden.</p>
           <div class="precheck-grid">
             <div><span>🎙</span><b>Mikrofon</b><small id="micCheck">noch nicht geprüft</small></div>
@@ -165,14 +166,19 @@
             <div><span>🌐</span><b>Verbindung</b><small id="networkCheck">wird geprüft</small></div>
             <div><span>🤖</span><b>Live-KI</b><small id="aiCheck">wird geprüft</small></div>
           </div>
-          <div class="notice">Diese App ist ein funktionsfähiger MVP. Die lokale Demo bewertet heuristisch; für produktive Nutzung muss die Realtime-KI und die fachlich validierte Bewertungs-Engine serverseitig angebunden werden.</div>
+          <div class="notice">Prüfungsmodus: keine Korrektur, kein Lob, keine Übersetzung und keine Hilfestellung während der Prüfung. Die KI-Bewertung erscheint erst nach Abschluss und ist eine DTZ-orientierte Simulation, kein offizielles Prüfungsergebnis.</div>
           <button class="btn primary large" id="beginExamBtn">Simulation starten</button>
         </div>
 
         <div class="card exam-room hidden" id="examRoom">
           <div class="exam-topline">
-            <div><span class="eyebrow">Prüfung läuft</span><h3 id="examPartTitle">Teil 1A · Über sich sprechen</h3></div>
+            <div><span class="eyebrow">Prüfung läuft</span><h3 id="examPartTitle">Teil 1 · Sich vorstellen</h3><small id="examPartDetail">Teil 1A · Über sich sprechen</small></div>
             <div class="timer" id="examTimer">16:00</div>
+          </div>
+          <div class="exam-phase-strip" id="examPhaseStrip">
+            <span data-phase="1" class="active">1 · Sich vorstellen</span>
+            <span data-phase="2">2 · Bild & Erfahrungen</span>
+            <span data-phase="3">3 · Gemeinsam planen</span>
           </div>
           <div class="progress-track"><div id="examProgressBar"></div></div>
           <figure id="imageTask" class="photo-task hidden" aria-label="Bildaufgabe">
@@ -180,9 +186,9 @@
             <figcaption id="examPhotoCaption">Sehen Sie sich das Foto genau an und beschreiben Sie die Situation.</figcaption>
           </figure>
           <div class="conversation-stage exam-stage">
-            <div class="partner-avatar danger">KI</div>
+            <div class="partner-avatar danger" id="examAvatar">P</div>
             <div class="speech-card">
-              <small>KI-Prüfungspartner</small>
+              <small id="examAgentLabel">KI-Prüferin</small>
               <p id="examPrompt">Bitte stellen Sie sich kurz vor.</p>
             </div>
           </div>
@@ -239,11 +245,11 @@
       </section>
     </main>
   </div>
-  <script src="realtime.js?v=1.1.1"></script>
-  <script src="app.js?v=1.1.1"></script>
+  <script src="realtime.js?v=1.3.0"></script>
+  <script src="app.js?v=1.3.0"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/sw.js?v=1.1.1').then(r=>r.update()).catch(()=>{});
+      navigator.serviceWorker.register('/sw.js?v=1.3.0').then(r=>r.update()).catch(()=>{});
     }
     let deferredInstallPrompt;
     window.addEventListener('beforeinstallprompt', e => {

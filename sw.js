@@ -1,10 +1,10 @@
-const CACHE='dtz-speaking-v1.1.1';
+const CACHE='dtz-speaking-v1.3.0';
 const STATIC=[
   '/',
   '/index.html',
-  '/styles.css?v=1.1.1',
-  '/app.js?v=1.1.1',
-  '/realtime.js?v=1.1.1',
+  '/styles.css?v=1.3.0',
+  '/app.js?v=1.3.0',
+  '/realtime.js?v=1.3.0',
   '/manifest.webmanifest',
   '/data/photoTasks.json',
   '/assets/icon-192.png',

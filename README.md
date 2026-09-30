@@ -54,3 +54,20 @@ Die aktuelle Punktebewertung ist eine **DTZ-orientierte Simulation**, kein offiz
 
 ## Foto-Fix
 Bei `Bild beschreiben` wird jetzt ein echtes `<img>` aus `/assets/` verwendet. Zusätzlich prüft die App beim Start, ob die Bilddateien tatsächlich als Bild ausgeliefert werden. Der Service Worker löscht alte Caches bei Versionswechsel.
+## Version 1.2.0
+
+- Prüfungsmodus mit getrennten Rollen: **KI-Prüferin** und **KI-Gesprächspartner (Kandidat B)**
+- automatischer Live-Prüfungsablauf durch Sich vorstellen → Bild/Erfahrungen → Gemeinsam planen
+- sachlicher Prüfungsstil ohne Lob/Hilfe während der Prüfung
+- sachlicher Trainingscoach ohne pauschales Lob
+- Worterklärung auf ausdrückliche Nachfrage des Lernenden mit einfachen Beispielen
+- 25 Fotothemen bleiben vollständig erhalten
+
+
+## Version 1.3.0 – DTZ-Bewertung am Prüfungsende
+
+Die Prüfung erzeugt am Ende jetzt nur dann eine Punktbewertung, wenn ausreichende Evidenz vorhanden ist. Die Bewertung orientiert sich am veröffentlichten DTZ-Sprech-Raster (telc Übungstest 1, 3. Auflage 2024): Aufgabenbewältigung in Teil 1A, 1B, 2A, 2B und Teil 3 sowie Aussprache/Intonation, Flüssigkeit, Korrektheit und Wortschatz.
+
+Wichtig: Die KI wählt zunächst eine Kriterien-Stufe (B1 gut erfüllt / B1 erfüllt / A2 gut erfüllt / A2 erfüllt / A1 erfüllt / nicht erfüllt). Erst danach rechnet der Server deterministisch die zugehörigen Punkte aus. Es wird keine Punktzahl „nach Gefühl“ erzeugt.
+
+Aussprache/Intonation und Flüssigkeit werden über zwei verdeckte Bewertungen im laufenden Realtime-Audio-Kontext eingeschätzt. Aufgabenbewältigung, Korrektheit und Wortschatz werden zusätzlich von zwei unabhängigen Bewertungsdurchläufen anhand der Transkripte beurteilt. Fehlt die Audio-Evidenz oder schlägt die Bewertung fehl, zeigt die App bewusst keine erfundene Ersatznote an.

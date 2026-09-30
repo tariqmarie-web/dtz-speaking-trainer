@@ -136,3 +136,15 @@ textarea{font-size:16px}
   .photo-controls{grid-template-columns:1fr 1fr}
   .photo-controls #trainingRandomPhotoBtn{grid-column:1/-1;grid-row:1}
 }
+
+/* v1.2.0 – sachlicher Prüfungsmodus mit getrennten Rollen */
+.exam-role-note{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 4px}.exam-role-note span{background:#f5f7fb;border:1px solid #dfe5ef;border-radius:12px;padding:10px 12px;font-size:.94rem;color:#39465d}.exam-phase-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 10px}.exam-phase-strip span{border:1px solid #dbe2ee;border-radius:999px;padding:9px 12px;text-align:center;font-size:.9rem;color:#60708a;background:#fff}.exam-phase-strip span.active{background:#0f1a2d;color:#fff;border-color:#0f1a2d;font-weight:700}.partner-avatar.partner-role{background:#2368d8!important}.exam-topline small{display:block;margin-top:4px;color:#718096}.exam-transcript.hidden{display:none!important}
+@media(max-width:700px){.exam-phase-strip{grid-template-columns:1fr}.exam-phase-strip span{padding:8px 10px}.exam-role-note{display:grid;grid-template-columns:1fr}}
+
+
+/* v1.3.0 DTZ rubric result details */
+.score-row span small{display:block;margin-top:4px;font-size:.76rem;font-weight:600;color:var(--muted,#64748b)}
+.rubric-evidence{margin:-2px 0 8px;padding:7px 10px;border-radius:10px;background:rgba(15,23,42,.035);font-size:.84rem}
+.rubric-evidence summary{cursor:pointer;font-weight:700;color:#475569}
+.rubric-evidence ul{margin:8px 0 2px 20px;padding:0}
+.rubric-evidence li{margin:4px 0}
